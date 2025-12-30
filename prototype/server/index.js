@@ -22,6 +22,12 @@ app.use(express.static(path.join(__dirname, '../public')));
 const CLAUDE_CMD = process.env.CLAUDE_CMD || 'claude';
 const WORK_DIR = process.env.WORK_DIR || 'D:\\claude';
 
+// 设置 Git Bash 路径（如果配置了）
+if (process.env.CLAUDE_CODE_GIT_BASH_PATH) {
+  process.env.CLAUDE_CODE_GIT_BASH_PATH = process.env.CLAUDE_CODE_GIT_BASH_PATH;
+  console.log(`Git Bash 路径: ${process.env.CLAUDE_CODE_GIT_BASH_PATH}`);
+}
+
 console.log(`使用 Claude CLI: ${CLAUDE_CMD}`);
 console.log(`工作目录: ${WORK_DIR}`);
 
@@ -84,31 +90,57 @@ function executeClaude(args, options = {}) {
 
 // 流式执行 claude 命令
 function streamClaude(args, onData, onError, onComplete) {
-  const cmdArgs = ['--print', '--output-format', 'stream-json', ...args];
+  const cmdArgs = ['--print', '--verbose', '--output-format', 'stream-json', ...args];
+
+  console.log('[spawn] 命令:', CLAUDE_CMD);
+  console.log('[spawn] 参数:', cmdArgs);
+  console.log('[spawn] 工作目录:', WORK_DIR);
+  console.log('[spawn] CLAUDE_CODE_GIT_BASH_PATH:', process.env.CLAUDE_CODE_GIT_BASH_PATH);
 
   const child = spawn(CLAUDE_CMD, cmdArgs, {
     cwd: WORK_DIR,
     shell: true,
-    env: { ...process.env }
+    env: { ...process.env },
+    stdio: ['ignore', 'pipe', 'pipe']
   });
 
-  let buffer = '';
+  console.log('[spawn] PID:', child.pid);
+  console.log('[spawn] stdout 存在:', !!child.stdout);
+  console.log('[spawn] stderr 存在:', !!child.stderr);
 
-  child.stdout?.on('data', (data) => {
+  let buffer = '';
+  let byteCount = 0;
+
+  // 移除可选链，确保错误能被暴露
+  if (!child.stdout) {
+    onError('child.stdout is null!');
+    return child;
+  }
+
+  child.stdout.on('data', (data) => {
+    byteCount += data.length;
     const chunk = data.toString();
+    console.log('[stdout] 接收', data.length, '字节, 总计:', byteCount);
+    console.log('[stdout] 内容片段:', chunk.substring(0, 200));
+
     buffer += chunk;
 
     // 尝试解析每一行 JSON
     const lines = buffer.split('\n');
     buffer = lines.pop() || ''; // 保留未完成的行
 
+    console.log('[stdout] 分割后行数:', lines.length);
+
     for (const line of lines) {
       if (line.trim()) {
+        console.log('[stdout] 处理行:', line.substring(0, 100));
         try {
-          const data = JSON.parse(line);
-          onData(data);
+          const parsed = JSON.parse(line);
+          console.log('[stdout] 解析成功, type:', parsed.type);
+          onData(parsed);
         } catch (e) {
           // 不是有效的 JSON，可能是文本输出
+          console.log('[stdout] JSON 解析失败:', e.message);
           if (line.trim()) {
             onData({ type: 'text', content: line });
           }
@@ -117,16 +149,36 @@ function streamClaude(args, onData, onError, onComplete) {
     }
   });
 
-  child.stderr?.on('data', (data) => {
+  child.stdout.on('end', () => {
+    console.log('[stdout] 流结束');
+  });
+
+  if (!child.stderr) {
+    onError('child.stderr is null!');
+    return child;
+  }
+
+  child.stderr.on('data', (data) => {
     const msg = data.toString();
+    console.error('[stderr]', msg);
     onError(msg);
   });
 
+  child.stderr.on('end', () => {
+    console.log('[stderr] 流结束');
+  });
+
   child.on('close', (code) => {
+    console.log('[process] 关闭, 退出码:', code);
     onComplete(code);
   });
 
+  child.on('exit', (code) => {
+    console.log('[process] 退出, 退出码:', code);
+  });
+
   child.on('error', (err) => {
+    console.error('[process] 错误:', err);
     onError(err.message);
   });
 
@@ -227,39 +279,53 @@ app.post('/api/chat', async (req, res) => {
     args,
     // onData
     (data) => {
+      // 调试：打印接收到的数据类型
+      console.log('[claude event]:', data.type);
+
       // 处理不同类型的消息
-      if (data.type === 'message' || data.type === 'content_block_delta') {
-        if (data.delta?.text) {
-          currentMessage += data.delta.text;
-          res.write(`data: ${JSON.stringify({ type: 'text', text: data.delta.text })}\n\n`);
-        }
-      } else if (data.type === 'content_block_start') {
-        if (data.content_block?.tool_use) {
-          const toolName = data.content_block.tool_use.name;
-          toolCalls.push({ name: toolName, input: data.content_block.tool_use.input });
-          res.write(`data: ${JSON.stringify({ type: 'tool_start', tool: toolName })}\n\n`);
-        }
-      } else if (data.type === 'content_block_stop') {
-        if (toolCalls.length > 0) {
-          const lastTool = toolCalls[toolCalls.length - 1];
-          res.write(`data: ${JSON.stringify({ type: 'tool_end', tool: lastTool.name })}\n\n`);
-        }
-      } else if (data.type === 'message_stop') {
-        // 保存会话 ID
+      if (data.type === 'system') {
+        // 系统初始化信息
+        console.log('[claude]: System initialized, session:', data.session_id);
+      }
+      else if (data.type === 'assistant') {
+        // 助手消息
+        console.log('[claude]: Assistant message received');
+
+        // 保存 session_id
         if (data.session_id) {
           conversation.sessionId = data.session_id;
         }
-      } else if (data.type === 'error') {
-        res.write(`data: ${JSON.stringify({ type: 'error', error: data.error })}\n\n`);
-      }
 
-      // 保存到会话历史
-      if (data.type === 'message_stop' && currentMessage) {
-        conversation.messages.push({
-          role: 'assistant',
-          content: currentMessage,
-          timestamp: new Date().toISOString()
-        });
+        // 提取消息内容
+        if (data.message && data.message.content) {
+          for (const item of data.message.content) {
+            if (item.type === 'text' && item.text) {
+              currentMessage += item.text;
+              res.write(`data: ${JSON.stringify({ type: 'text', text: item.text })}\n\n`);
+            }
+            // TODO: 处理工具调用 (tool_use 类型)
+            else if (item.type === 'tool_use') {
+              const toolName = item.name;
+              res.write(`data: ${JSON.stringify({ type: 'tool_start', tool: toolName })}\n\n`);
+            }
+          }
+        }
+      }
+      else if (data.type === 'result') {
+        // 结果事件，对话结束
+        console.log('[claude]: Result received, subtype:', data.subtype);
+
+        // 保存到会话历史
+        if (currentMessage) {
+          conversation.messages.push({
+            role: 'assistant',
+            content: currentMessage,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+      else if (data.type === 'error') {
+        res.write(`data: ${JSON.stringify({ type: 'error', error: data.error || data.message })}\n\n`);
       }
     },
     // onError
