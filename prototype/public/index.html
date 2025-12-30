@@ -131,6 +131,23 @@
     </div>
   </div>
 
+  <!-- 权限确认弹窗 -->
+  <div id="permissionModal" class="modal">
+    <div class="modal-content permission-modal">
+      <div class="modal-header">
+        <h3>⚠️ Claude 请求权限</h3>
+      </div>
+      <div class="modal-body">
+        <p>Claude 请求执行以下操作：</p>
+        <div id="permissionList" class="permission-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="denyPermission" class="btn-secondary">拒绝</button>
+        <button id="allowPermission" class="btn-primary">允许</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/app.js"></script>
 </body>
 </html>

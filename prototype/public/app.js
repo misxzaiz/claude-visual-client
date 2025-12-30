@@ -8,10 +8,12 @@ const API_BASE = 'http://localhost:3000/api';
 // 应用状态
 const state = {
   conversationId: null,
+  sessionId: null,
   isConnected: false,
   isStreaming: false,
   currentMessage: '',
-  toolCalls: []
+  toolCalls: [],
+  pendingPermission: null  // 待处理的权限请求
 };
 
 // DOM 元素
@@ -30,7 +32,12 @@ const elements = {
   clearTools: document.getElementById('clearTools'),
   filePreview: document.getElementById('filePreview'),
   previewFileName: document.getElementById('previewFileName'),
-  previewFileContent: document.getElementById('previewFileContent')
+  previewFileContent: document.getElementById('previewFileContent'),
+  // 权限弹窗元素
+  permissionModal: document.getElementById('permissionModal'),
+  permissionList: document.getElementById('permissionList'),
+  allowPermission: document.getElementById('allowPermission'),
+  denyPermission: document.getElementById('denyPermission')
 };
 
 // ==================== 初始化 ====================
@@ -64,6 +71,14 @@ async function init() {
     elements.messageInput.style.height = 'auto';
     elements.messageInput.style.height = Math.min(elements.messageInput.scrollHeight, 150) + 'px';
   });
+
+  // 权限弹窗事件
+  if (elements.allowPermission) {
+    elements.allowPermission.addEventListener('click', () => handlePermissionResponse(true));
+  }
+  if (elements.denyPermission) {
+    elements.denyPermission.addEventListener('click', () => handlePermissionResponse(false));
+  }
 
   // 检查连接
   await checkConnection();
@@ -224,6 +239,12 @@ async function streamChat(message, conversationId, isContinue = false) {
 
               case 'tool_end':
                 updateToolLog(event.tool, '完成');
+                break;
+
+              case 'permission_request':
+                // 处理权限请求
+                console.log('权限请求:', event);
+                showPermissionModal(event);
                 break;
 
               case 'error':
@@ -525,6 +546,148 @@ function updateToolLog(toolName, detail) {
 
 function clearToolLog() {
   elements.toolLog.innerHTML = '<div class="empty-state">暂无工具调用</div>';
+}
+
+// ==================== 权限处理 ====================
+
+// 显示权限确认弹窗
+function showPermissionModal(event) {
+  state.pendingPermission = event;
+
+  // 保存 sessionId 用于恢复会话
+  if (event.sessionId) {
+    state.sessionId = event.sessionId;
+  }
+
+  // 生成权限列表 HTML
+  const denials = event.denials || [];
+  let html = '';
+
+  for (const denial of denials) {
+    const toolName = denial.tool_name || 'Unknown';
+    const input = denial.tool_input || {};
+
+    html += `
+      <div class="permission-item">
+        <div class="permission-tool">${escapeHtml(toolName)}</div>
+        <div class="permission-detail">${formatPermissionInput(toolName, input)}</div>
+      </div>
+    `;
+  }
+
+  elements.permissionList.innerHTML = html;
+  elements.permissionModal.classList.add('show');
+}
+
+// 格式化权限输入详情
+function formatPermissionInput(toolName, input) {
+  switch (toolName) {
+    case 'Write':
+      return `写入文件: ${escapeHtml(input.file_path || '')}`;
+    case 'Edit':
+      return `编辑文件: ${escapeHtml(input.file_path || '')}`;
+    case 'Bash':
+      return `执行命令: ${escapeHtml(input.command || '')}`;
+    case 'Read':
+      return `读取文件: ${escapeHtml(input.file_path || '')}`;
+    default:
+      return escapeHtml(JSON.stringify(input));
+  }
+}
+
+// 处理权限响应（允许/拒绝）
+async function handlePermissionResponse(allowed) {
+  // 关闭弹窗
+  elements.permissionModal.classList.remove('show');
+
+  if (!allowed) {
+    addSystemMessage('❌ 权限请求已被拒绝');
+    return;
+  }
+
+  // 允许后发送继续消息
+  addSystemMessage('⏳ 权限已授予，继续执行...');
+
+  try {
+    const response = await fetch(`${API_BASE}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        continue: true,
+        conversationId: state.conversationId
+      })
+    });
+
+    // 处理继续对话的流式响应
+    await handleContinueResponse(response);
+  } catch (error) {
+    addSystemMessage(`❌ 继续执行失败: ${error.message}`);
+  }
+}
+
+// 处理继续对话的响应
+async function handleContinueResponse(response) {
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  // 找到当前消息容器
+  const messageDiv = document.querySelector('.message[id="current-message"]') ||
+                     document.createElement('div');
+  if (!messageDiv.id) {
+    messageDiv.className = 'message';
+    messageDiv.id = 'current-message';
+    messageDiv.innerHTML = `
+      <div class="message-header">
+        <span class="message-role assistant">Claude</span>
+        <span class="message-time">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+      <div class="message-content"></div>
+    `;
+    elements.chatMessages.appendChild(messageDiv);
+  }
+
+  const contentDiv = messageDiv.querySelector('.message-content');
+  let fullText = contentDiv.textContent || '';
+
+  state.isStreaming = true;
+  elements.sendMessage.disabled = true;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6);
+        if (data === '[DONE]') continue;
+
+        try {
+          const event = JSON.parse(data);
+
+          if (event.type === 'text') {
+            fullText += event.text;
+            contentDiv.innerHTML = formatMessage(fullText);
+            scrollToBottom();
+          }
+        } catch (e) {
+          console.error('解析继续响应失败:', e);
+        }
+      }
+    }
+  }
+
+  messageDiv.removeAttribute('id');
+  state.isStreaming = false;
+  elements.sendMessage.disabled = false;
 }
 
 // ==================== 启动应用 ====================

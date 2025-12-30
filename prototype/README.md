@@ -82,7 +82,7 @@ prototype/
 
 ## 配置
 
-可选环境变量 (`.env` 文件):
+环境变量 (`.env` 文件):
 
 ```bash
 # Claude 命令路径 (默认: claude)
@@ -93,7 +93,25 @@ WORK_DIR=D:\claude
 
 # 服务器端口 (默认: 3000)
 PORT=3000
+
+# 权限模式 (默认: bypassPermissions)
+# default              - 每次操作需要确认
+# dontAsk              - 不询问但自动拒绝危险操作（写入/Bash被禁用）
+# bypassPermissions    - 自动允许所有操作 ⚠️ (原型推荐)
+# acceptEdits          - 自动允许编辑操作
+PERMISSION_MODE=bypassPermissions
 ```
+
+### 权限模式说明
+
+| 模式 | 说明 | 写入 | Bash | 推荐场景 |
+|------|------|------|------|---------|
+| `default` | 每次操作需要确认 | ✅ | ✅ | 个人使用 |
+| `dontAsk` | 不询问但拒绝危险操作 | ❌ | ❌ | 仅读取 |
+| `bypassPermissions` | 自动允许所有操作 | ✅ | ✅ | **原型开发** |
+| `acceptEdits` | 自动允许编辑 | ✅ | ❌ | 仅编辑文件 |
+
+> ⚠️ `bypassPermissions` 模式会自动允许所有操作，请确保你信任 Claude 的操作内容。
 
 ## 技术栈
 

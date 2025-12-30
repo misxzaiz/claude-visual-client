@@ -21,7 +21,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 const CLAUDE_CMD = process.env.CLAUDE_CMD || 'claude';
 const WORK_DIR = process.env.WORK_DIR || 'D:\\claude';
-const PERMISSION_MODE = process.env.PERMISSION_MODE || 'dontAsk';
+const PERMISSION_MODE = process.env.PERMISSION_MODE || 'bypassPermissions';
 
 // 设置 Git Bash 路径（如果配置了）
 if (process.env.CLAUDE_CODE_GIT_BASH_PATH) {
@@ -32,12 +32,20 @@ if (process.env.CLAUDE_CODE_GIT_BASH_PATH) {
 console.log(`使用 Claude CLI: ${CLAUDE_CMD}`);
 console.log(`工作目录: ${WORK_DIR}`);
 
-// 权限模式警告
-if (PERMISSION_MODE === 'dontAsk') {
+// 权限模式说明
+const modeDescriptions = {
+  'default': '每次操作需要确认',
+  'dontAsk': '不询问但自动拒绝危险操作（写入/Bash被禁用）',
+  'bypassPermissions': '自动允许所有操作 ⚠️',
+  'acceptEdits': '自动允许编辑操作'
+};
+
+if (modeDescriptions[PERMISSION_MODE]) {
   console.log('');
-  console.log('⚠️  权限模式: dontAsk (自动允许所有操作)');
-  console.log('   请确保你信任 Claude 的操作，或修改 .env 中的 PERMISSION_MODE');
-  console.log('   可选值: default(询问) | dontAsk(自动允许) | read-only(只读)');
+  console.log(`权限模式: ${PERMISSION_MODE} (${modeDescriptions[PERMISSION_MODE]})`);
+  if (PERMISSION_MODE === 'bypassPermissions') {
+    console.log('⚠️  请确保你信任 Claude 的操作');
+  }
   console.log('');
 }
 
@@ -331,6 +339,18 @@ app.post('/api/chat', async (req, res) => {
       else if (data.type === 'result') {
         // 结果事件，对话结束
         console.log('[claude]: Result received, subtype:', data.subtype);
+
+        // 检查是否有权限被拒绝
+        if (data.permission_denials && data.permission_denials.length > 0) {
+          console.log('[permission] 权限被拒绝:', data.permission_denials);
+
+          // 发送权限请求事件给前端
+          res.write(`data: ${JSON.stringify({
+            type: 'permission_request',
+            denials: data.permission_denials,
+            sessionId: data.session_id
+          })}\n\n`);
+        }
 
         // 保存到会话历史
         if (currentMessage) {

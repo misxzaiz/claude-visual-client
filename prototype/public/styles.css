@@ -627,3 +627,62 @@ body {
   0%, 60%, 100% { transform: translateY(0); }
   30% { transform: translateY(-8px); }
 }
+
+/* ==================== 权限确认弹窗 ==================== */
+
+.permission-modal {
+  max-width: 500px;
+}
+
+.permission-modal .modal-header h3 {
+  color: var(--warning);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.permission-modal .modal-body {
+  padding: 20px;
+}
+
+.permission-modal .modal-body p {
+  margin-bottom: 16px;
+  color: var(--text-secondary);
+}
+
+.permission-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.permission-item {
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  border-left: 3px solid var(--warning);
+}
+
+.permission-item .permission-tool {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.permission-item .permission-detail {
+  font-size: 13px;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.permission-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.permission-modal .modal-footer button {
+  min-width: 80px;
+}
