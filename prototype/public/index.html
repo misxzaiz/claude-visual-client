@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Visual Client - Prototype</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部导航栏 -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          <span>Claude Visual Client</span>
+        </div>
+        <span class="version">v0.1.0</span>
+      </div>
+      <div class="header-right">
+        <div id="connectionStatus" class="status-indicator offline">
+          <span class="dot"></span>
+          <span class="text">未连接</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主体内容 -->
+    <div class="main-container">
+      <!-- 左侧边栏 - 文件浏览器 -->
+      <aside class="sidebar-left">
+        <div class="sidebar-header">
+          <h3>文件浏览器</h3>
+          <button id="refreshFiles" class="icon-btn" title="刷新">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6M1 20v-6h6"/>
+              <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+          </button>
+        </div>
+        <div id="fileTree" class="file-tree">
+          <div class="loading">加载中...</div>
+        </div>
+      </aside>
+
+      <!-- 中间 - 对话区域 -->
+      <main class="chat-area">
+        <div id="chatMessages" class="chat-messages">
+          <div class="welcome-message">
+            <div class="welcome-icon">🤖</div>
+            <h2>欢迎使用 Claude Visual Client</h2>
+            <p>这是一个基于 Node.js 的快速原型版本</p>
+            <div class="features">
+              <div class="feature-item">💬 AI 对话交互</div>
+              <div class="feature-item">📁 文件浏览查看</div>
+              <div class="feature-item">✅ 任务状态追踪</div>
+            </div>
+            <p class="hint">在下方输入框中开始对话...</p>
+          </div>
+        </div>
+
+        <!-- 输入区域 -->
+        <div class="chat-input-area">
+          <textarea
+            id="messageInput"
+            placeholder="输入消息... (Shift+Enter 换行, Enter 发送)"
+            rows="1"
+          ></textarea>
+          <div class="input-actions">
+            <button id="clearChat" class="btn-secondary">清空对话</button>
+            <button id="sendMessage" class="btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              发送
+            </button>
+          </div>
+        </div>
+      </main>
+
+      <!-- 右侧边栏 - 任务和工具 -->
+      <aside class="sidebar-right">
+        <!-- 任务列表 -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>任务列表</h3>
+            <button id="refreshTasks" class="icon-btn" title="刷新">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6M1 20v-6h6"/>
+                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+              </svg>
+            </button>
+          </div>
+          <div id="taskList" class="task-list">
+            <div class="empty-state">暂无任务</div>
+          </div>
+        </div>
+
+        <!-- 工具调用日志 -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>工具调用</h3>
+            <button id="clearTools" class="icon-btn" title="清空">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
+          <div id="toolLog" class="tool-log">
+            <div class="empty-state">暂无工具调用</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- 文件预览模态框 -->
+  <div id="filePreview" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="previewFileName">文件预览</h3>
+        <button class="close-btn" onclick="closeFilePreview()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <pre><code id="previewFileContent"></code></pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
