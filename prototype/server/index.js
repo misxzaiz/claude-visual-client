@@ -21,6 +21,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 const CLAUDE_CMD = process.env.CLAUDE_CMD || 'claude';
 const WORK_DIR = process.env.WORK_DIR || 'D:\\claude';
+const PERMISSION_MODE = process.env.PERMISSION_MODE || 'dontAsk';
 
 // 设置 Git Bash 路径（如果配置了）
 if (process.env.CLAUDE_CODE_GIT_BASH_PATH) {
@@ -30,6 +31,15 @@ if (process.env.CLAUDE_CODE_GIT_BASH_PATH) {
 
 console.log(`使用 Claude CLI: ${CLAUDE_CMD}`);
 console.log(`工作目录: ${WORK_DIR}`);
+
+// 权限模式警告
+if (PERMISSION_MODE === 'dontAsk') {
+  console.log('');
+  console.log('⚠️  权限模式: dontAsk (自动允许所有操作)');
+  console.log('   请确保你信任 Claude 的操作，或修改 .env 中的 PERMISSION_MODE');
+  console.log('   可选值: default(询问) | dontAsk(自动允许) | read-only(只读)');
+  console.log('');
+}
 
 // ==================== 活跃会话管理 ====================
 
@@ -90,12 +100,19 @@ function executeClaude(args, options = {}) {
 
 // 流式执行 claude 命令
 function streamClaude(args, onData, onError, onComplete) {
-  const cmdArgs = ['--print', '--verbose', '--output-format', 'stream-json', ...args];
+  const cmdArgs = [
+    '--print',
+    '--verbose',
+    '--output-format', 'stream-json',
+    '--permission-mode', PERMISSION_MODE,
+    ...args
+  ];
 
   console.log('[spawn] 命令:', CLAUDE_CMD);
   console.log('[spawn] 参数:', cmdArgs);
   console.log('[spawn] 工作目录:', WORK_DIR);
   console.log('[spawn] CLAUDE_CODE_GIT_BASH_PATH:', process.env.CLAUDE_CODE_GIT_BASH_PATH);
+  console.log('[spawn] PERMISSION_MODE:', PERMISSION_MODE);
 
   const child = spawn(CLAUDE_CMD, cmdArgs, {
     cwd: WORK_DIR,
