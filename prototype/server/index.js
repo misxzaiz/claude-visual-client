@@ -20,17 +20,25 @@ app.use(express.static(path.join(__dirname, '../public')));
 // ==================== 配置 ====================
 
 const CLAUDE_CMD = process.env.CLAUDE_CMD || 'claude';
-const WORK_DIR = process.env.WORK_DIR || 'D:\\claude';
+const WORK_DIR = process.env.WORK_DIR;  // 如果未设置，则为 undefined
 const PERMISSION_MODE = process.env.PERMISSION_MODE || 'bypassPermissions';
 
-// 设置 Git Bash 路径（如果配置了）
-if (process.env.CLAUDE_CODE_GIT_BASH_PATH) {
-  process.env.CLAUDE_CODE_GIT_BASH_PATH = process.env.CLAUDE_CODE_GIT_BASH_PATH;
-  console.log(`Git Bash 路径: ${process.env.CLAUDE_CODE_GIT_BASH_PATH}`);
+// Git Bash 配置
+const GIT_BIN_PATH = process.env.CLAUDE_CODE_GIT_BIN_PATH;
+
+// 直接修改 process.env，添加 Git 到 PATH
+if (GIT_BIN_PATH) {
+  console.log(`Git bin 目录: ${GIT_BIN_PATH}`);
+  console.log(`已添加到系统 PATH`);
+  process.env.PATH = `${GIT_BIN_PATH};${process.env.PATH}`;
 }
 
 console.log(`使用 Claude CLI: ${CLAUDE_CMD}`);
-console.log(`工作目录: ${WORK_DIR}`);
+if (WORK_DIR) {
+  console.log(`工作目录: ${WORK_DIR}`);
+} else {
+  console.log(`工作目录: (使用当前目录)`);
+}
 
 // 权限模式说明
 const modeDescriptions = {
@@ -68,12 +76,17 @@ function executeClaude(args, options = {}) {
   return new Promise((resolve, reject) => {
     const cmdArgs = ['--print', '--output-format', 'json', ...args];
 
-    const child = spawn(CLAUDE_CMD, cmdArgs, {
-      cwd: WORK_DIR,
-      shell: true,
-      env: { ...process.env },
+    const spawnOptions = {
+      shell: true,  // 使用系统默认 shell
       ...options
-    });
+    };
+
+    // 只有在设置了 WORK_DIR 时才添加 cwd
+    if (WORK_DIR) {
+      spawnOptions.cwd = WORK_DIR;
+    }
+
+    const child = spawn(CLAUDE_CMD, cmdArgs, spawnOptions);
 
     let stdout = '';
     let stderr = '';
@@ -118,16 +131,21 @@ function streamClaude(args, onData, onError, onComplete) {
 
   console.log('[spawn] 命令:', CLAUDE_CMD);
   console.log('[spawn] 参数:', cmdArgs);
-  console.log('[spawn] 工作目录:', WORK_DIR);
-  console.log('[spawn] CLAUDE_CODE_GIT_BASH_PATH:', process.env.CLAUDE_CODE_GIT_BASH_PATH);
+  console.log('[spawn] 工作目录:', WORK_DIR || '(使用当前目录)');
+  console.log('[spawn] Git bin 目录:', GIT_BIN_PATH);
   console.log('[spawn] PERMISSION_MODE:', PERMISSION_MODE);
 
-  const child = spawn(CLAUDE_CMD, cmdArgs, {
-    cwd: WORK_DIR,
-    shell: true,
-    env: { ...process.env },
+  const spawnOptions = {
+    shell: true,  // 使用系统默认 shell
     stdio: ['ignore', 'pipe', 'pipe']
-  });
+  };
+
+  // 只有在设置了 WORK_DIR 时才添加 cwd
+  if (WORK_DIR) {
+    spawnOptions.cwd = WORK_DIR;
+  }
+
+  const child = spawn(CLAUDE_CMD, cmdArgs, spawnOptions);
 
   console.log('[spawn] PID:', child.pid);
   console.log('[spawn] stdout 存在:', !!child.stdout);
@@ -218,7 +236,9 @@ app.get('/api/health', async (req, res) => {
     // 直接获取 claude 版本
     const { spawn } = require('child_process');
     const version = await new Promise((resolve, reject) => {
-      const child = spawn(CLAUDE_CMD, ['--version'], { shell: true });
+      const child = spawn(CLAUDE_CMD, ['--version'], {
+        shell: true  // 使用系统默认 shell
+      });
       let output = '';
       child.stdout?.on('data', (d) => output += d.toString());
       child.stderr?.on('data', (d) => output += d.toString());
@@ -235,6 +255,7 @@ app.get('/api/health', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+    console.error('[health] 健康检查失败:', error);
     res.status(500).json({
       status: 'error',
       error: error.message
