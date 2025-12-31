@@ -436,43 +436,6 @@ app.delete('/api/conversations/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// ==================== 文件系统接口 ====================
-
-const fs = require('fs').promises;
-
-// 获取目录树
-app.get('/api/files/tree', async (req, res) => {
-  try {
-    const dirPath = req.query.path || WORK_DIR;
-    const tree = await buildDirectoryTree(dirPath);
-    res.json(tree);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 读取文件内容
-app.get('/api/files/content', async (req, res) => {
-  try {
-    const filePath = req.query.path;
-    if (!filePath) {
-      return res.status(400).json({ error: '文件路径不能为空' });
-    }
-
-    const content = await fs.readFile(filePath, 'utf-8');
-    const stats = await fs.stat(filePath);
-
-    res.json({
-      path: filePath,
-      content: content,
-      size: stats.size,
-      modified: stats.mtime
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // ==================== 会话列表接口 ====================
 
 // 获取可恢复的会话列表
@@ -486,63 +449,10 @@ app.get('/api/sessions', async (req, res) => {
   }
 });
 
-// ==================== 辅助函数 ====================
-
-async function buildDirectoryTree(dirPath, maxDepth = 3, currentDepth = 0) {
-  try {
-    if (currentDepth >= maxDepth) {
-      return { name: path.basename(dirPath), type: 'folder', collapsed: true };
-    }
-
-    const entries = await fs.readdir(dirPath, { withFileTypes: true });
-    const nodes = [];
-
-    for (const entry of entries) {
-      if (entry.name.startsWith('.')) continue;
-
-      const fullPath = path.join(dirPath, entry.name);
-
-      if (entry.isDirectory()) {
-        if (['node_modules', '.git', 'dist', 'build', '__pycache__'].includes(entry.name)) {
-          nodes.push({
-            name: entry.name,
-            type: 'folder',
-            path: fullPath,
-            collapsed: true
-          });
-        } else {
-          nodes.push({
-            name: entry.name,
-            type: 'folder',
-            path: fullPath,
-            children: await buildDirectoryTree(fullPath, maxDepth, currentDepth + 1)
-          });
-        }
-      } else {
-        nodes.push({
-          name: entry.name,
-          type: 'file',
-          path: fullPath,
-          ext: path.extname(entry.name)
-        });
-      }
-    }
-
-    return {
-      name: path.basename(dirPath) || dirPath,
-      type: 'folder',
-      path: dirPath,
-      children: nodes
-    };
-
-  } catch (error) {
-    return { name: path.basename(dirPath), type: 'folder', error: error.message };
-  }
-}
-
 // ==================== 启动服务器 ====================
 
 app.listen(PORT, () => {
+  const workDirDisplay = WORK_DIR || process.cwd();
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
@@ -552,7 +462,7 @@ app.listen(PORT, () => {
 ║        版本: 0.2.0 (基于 Claude CLI)                      ║
 ║                                                           ║
 ║        Claude CLI: ${CLAUDE_CMD}                              ║
-║        工作目录: ${WORK_DIR}             ║
+║        工作目录: ${workDirDisplay}             ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
   `);

@@ -24,15 +24,10 @@ const elements = {
   sendMessage: document.getElementById('sendMessage'),
   clearChat: document.getElementById('clearChat'),
   continueChat: document.getElementById('continueChat'),
-  fileTree: document.getElementById('fileTree'),
-  refreshFiles: document.getElementById('refreshFiles'),
   taskList: document.getElementById('taskList'),
   refreshTasks: document.getElementById('refreshTasks'),
   toolLog: document.getElementById('toolLog'),
   clearTools: document.getElementById('clearTools'),
-  filePreview: document.getElementById('filePreview'),
-  previewFileName: document.getElementById('previewFileName'),
-  previewFileContent: document.getElementById('previewFileContent'),
   // 权限弹窗元素
   permissionModal: document.getElementById('permissionModal'),
   permissionList: document.getElementById('permissionList'),
@@ -54,7 +49,6 @@ async function init() {
     elements.continueChat.addEventListener('click', continueConversation);
   }
 
-  elements.refreshFiles.addEventListener('click', loadFileTree);
   elements.refreshTasks.addEventListener('click', () => renderTasks([]));
   elements.clearTools.addEventListener('click', clearToolLog);
 
@@ -82,11 +76,6 @@ async function init() {
 
   // 检查连接
   await checkConnection();
-
-  // 加载初始数据
-  if (state.isConnected) {
-    await loadFileTree();
-  }
 
   console.log('初始化完成');
 }
@@ -361,148 +350,6 @@ function clearChat() {
   }
 }
 
-// ==================== 文件浏览器 ====================
-
-async function loadFileTree() {
-  elements.fileTree.innerHTML = '<div class="loading">加载中...</div>';
-
-  try {
-    const response = await fetch(`${API_BASE}/files/tree`);
-    const data = await response.json();
-
-    elements.fileTree.innerHTML = '';
-    renderFileTree(data, elements.fileTree);
-
-  } catch (error) {
-    elements.fileTree.innerHTML = `<div class="empty-state">加载失败: ${error.message}</div>`;
-  }
-}
-
-function renderFileTree(node, container) {
-  const item = document.createElement('div');
-  item.className = 'file-item';
-
-  const isFolder = node.type === 'folder';
-
-  // 图标
-  let icon = '';
-  if (isFolder) {
-    icon = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-    </svg>`;
-  } else {
-    const ext = node.ext || '';
-    const color = getFileColor(ext);
-    icon = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-      <polyline points="14 2 14 8 20 8"/>
-    </svg>`;
-  }
-
-  const chevron = isFolder ? `<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-    <polyline points="9 18 15 12 9 6"/>
-  </svg>` : '';
-
-  item.innerHTML = `${chevron}${icon}<span>${node.name}</span>`;
-
-  container.appendChild(item);
-
-  // 如果是文件夹且有子节点
-  if (isFolder && node.children && !node.collapsed) {
-    const childrenContainer = document.createElement('div');
-    childrenContainer.className = 'file-children';
-    container.appendChild(childrenContainer);
-
-    // 递归渲染子节点
-    renderFileChildren(node.children, childrenContainer);
-  }
-
-  // 文件夹点击事件
-  if (isFolder) {
-    item.addEventListener('click', () => {
-      item.classList.toggle('expanded');
-      // 重新加载
-      loadFileTree();
-    });
-  }
-
-  // 文件点击事件
-  if (!isFolder && node.path) {
-    item.style.cursor = 'pointer';
-    item.addEventListener('click', () => openFilePreview(node.path, node.name));
-  }
-}
-
-function renderFileChildren(children, container) {
-  children.forEach(child => {
-    const item = document.createElement('div');
-    item.className = `file-item ${child.type}`;
-
-    const ext = child.ext || '';
-    let icon = '';
-
-    if (child.type === 'folder') {
-      icon = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-      </svg>`;
-      item.innerHTML = `${icon}<span>${child.name}</span>`;
-      item.addEventListener('click', () => {
-        item.classList.toggle('expanded');
-      });
-    } else {
-      const color = getFileColor(ext);
-      icon = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-      </svg>`;
-      item.innerHTML = `${icon}<span>${child.name}</span>`;
-      item.addEventListener('click', () => openFilePreview(child.path, child.name));
-    }
-
-    container.appendChild(item);
-
-    // 递归渲染子文件夹
-    if (child.type === 'folder' && child.children && !child.collapsed) {
-      const childrenContainer = document.createElement('div');
-      childrenContainer.className = 'file-children';
-      container.appendChild(childrenContainer);
-      renderFileChildren(child.children, childrenContainer);
-    }
-  });
-}
-
-function getFileColor(ext) {
-  const colors = {
-    '.js': '#f7df1e',
-    '.ts': '#3178c6',
-    '.py': '#3776ab',
-    '.html': '#e34c26',
-    '.css': '#264de4',
-    '.json': '#cbcb41',
-    '.md': '#083fa1',
-    '.txt': '#6d6d6d'
-  };
-  return colors[ext.toLowerCase()] || '#888';
-}
-
-async function openFilePreview(filePath, fileName) {
-  try {
-    const response = await fetch(`${API_BASE}/files/content?path=${encodeURIComponent(filePath)}`);
-    const data = await response.json();
-
-    elements.previewFileName.textContent = fileName;
-    elements.previewFileContent.textContent = data.content;
-    elements.filePreview.classList.add('show');
-
-  } catch (error) {
-    alert(`无法打开文件: ${error.message}`);
-  }
-}
-
-function closeFilePreview() {
-  elements.filePreview.classList.remove('show');
-}
-
 // ==================== 任务管理 ====================
 
 function renderTasks(tasks) {
@@ -695,4 +542,4 @@ async function handleContinueResponse(response) {
 document.addEventListener('DOMContentLoaded', init);
 
 // 全局函数（供 HTML 调用）
-window.closeFilePreview = closeFilePreview;
+// （无）
