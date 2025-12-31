@@ -3,7 +3,8 @@
  * 基于 Claude CLI 的版本
  */
 
-const API_BASE = 'http://localhost:3000/api';
+// 使用相对路径，自动适配服务器的实际端口
+const API_BASE = '/api';
 
 // 应用状态
 const state = {

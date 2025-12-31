@@ -451,14 +451,49 @@ app.get('/api/sessions', async (req, res) => {
 
 // ==================== 启动服务器 ====================
 
-app.listen(PORT, () => {
+// 启动服务器（支持自适应端口）
+function startServer(port) {
+  const server = app.listen(port)
+    .on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`⚠️  端口 ${port} 被占用！`);
+        console.log(`正在使用系统自动分配的端口...\n`);
+
+        // 使用系统自动分配的端口
+        server.listen(0, () => {
+          const actualPort = server.address().port;
+          showStartupInfo(actualPort);
+          console.log(`\n✅ 服务器成功启动在端口 ${actualPort}`);
+        });
+      } else {
+        console.error(`❌ 服务器启动失败: ${err.message}`);
+        process.exit(1);
+      }
+    });
+
+  // 成功监听
+  server.on('listening', () => {
+    const actualPort = server.address().port;
+    if (actualPort !== port) {
+      showStartupInfo(actualPort);
+      console.log(`\n✅ 服务器成功启动在端口 ${actualPort}`);
+    } else {
+      showStartupInfo(actualPort);
+    }
+  });
+
+  return server;
+}
+
+// 显示启动信息
+function showStartupInfo(port) {
   const workDirDisplay = WORK_DIR || process.cwd();
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
 ║        Claude Visual Client - 原型服务器                   ║
 ║                                                           ║
-║        服务地址: http://localhost:${PORT}                    ║
+║        服务地址: http://localhost:${port}                      ║
 ║        版本: 0.2.0 (基于 Claude CLI)                      ║
 ║                                                           ║
 ║        Claude CLI: ${CLAUDE_CMD}                              ║
@@ -467,4 +502,7 @@ app.listen(PORT, () => {
 ╚═══════════════════════════════════════════════════════════╝
   `);
   console.log('按 Ctrl+C 停止服务器\n');
-});
+}
+
+// 启动服务器
+const server = startServer(PORT);
