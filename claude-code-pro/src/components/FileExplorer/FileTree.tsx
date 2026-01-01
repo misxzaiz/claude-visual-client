@@ -28,7 +28,7 @@ const filterFiles = (files: FileInfo[], query: string): FileInfo[] => {
         });
       }
     } else if (nameMatches) {
-      // 对于文件，只检查名称匹配
+      // 对于文件，只检查名称是否匹配
       acc.push(file);
     }
     
@@ -40,6 +40,7 @@ export const FileTree = memo<FileTreeProps>(({ files, className = '' }) => {
   const { 
     selected_file, 
     expanded_folders, 
+    loading_folders,
     toggle_folder, 
     select_file,
     search_query 
@@ -80,6 +81,8 @@ export const FileTree = memo<FileTreeProps>(({ files, className = '' }) => {
           level={0}
           isExpanded={expanded_folders.has(file.path)}
           isSelected={selected_file?.path === file.path}
+          expandedFolders={expanded_folders}
+          loadingFolders={loading_folders}
           onToggle={() => handleToggleFolder(file.path)}
           onSelect={() => handleSelectFile(file)}
         />

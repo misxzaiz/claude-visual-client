@@ -1,5 +1,6 @@
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import { FileIcon } from './FileIcon';
+import { useFileExplorerStore } from '../../stores';
 import type { FileInfo } from '../../types';
 
 interface FileTreeNodeProps {
@@ -7,6 +8,8 @@ interface FileTreeNodeProps {
   level: number;
   isExpanded: boolean;
   isSelected: boolean;
+  expandedFolders: Set<string>;
+  loadingFolders: Set<string>;
   onToggle: () => void;
   onSelect: () => void;
 }
@@ -52,14 +55,40 @@ export const FileTreeNode = memo<FileTreeNodeProps>(({
   level,
   isExpanded,
   isSelected,
+  expandedFolders,
+  loadingFolders,
   onToggle,
   onSelect
 }) => {
-  const handleClick = (e: React.MouseEvent) => {
+  const { load_folder_content, get_cached_folder_content } = useFileExplorerStore();
+
+  // 懒加载逻辑：展开文件夹时加载内容
+  useEffect(() => {
+    if (file.is_dir && isExpanded) {
+      const cached = get_cached_folder_content(file.path);
+      
+      // 如果没有缓存且没有子项，触发加载
+      if (!cached && (!file.children || file.children.length === 0)) {
+        load_folder_content(file.path);
+      }
+    }
+  }, [file.is_dir, file.path, isExpanded, file.children, load_folder_content, get_cached_folder_content]);
+
+  const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
     if (file.is_dir) {
       onToggle();
+      
+      // 展开时检查是否需要加载内容
+      if (!isExpanded) {
+        const cached = get_cached_folder_content(file.path);
+        
+        // 如果没有缓存且没有子项，触发加载
+        if (!cached && (!file.children || file.children.length === 0)) {
+          await load_folder_content(file.path);
+        }
+      }
     } else {
       onSelect();
     }
@@ -71,6 +100,12 @@ export const FileTreeNode = memo<FileTreeNodeProps>(({
       handleClick(e as any);
     }
   };
+
+  // 检查是否正在加载
+  const isLoading = file.is_dir && loadingFolders.has(file.path);
+  
+  // 检查是否有子内容
+  const hasChildren = file.children && file.children.length > 0;
 
   return (
     <div>
@@ -87,15 +122,15 @@ export const FileTreeNode = memo<FileTreeNodeProps>(({
         tabIndex={0}
         aria-label={file.is_dir ? `文件夹 ${file.name}` : `文件 ${file.name}`}
       >
-        {/* 展开/收起图标 */}
+        {/* 展开/收起箭头 */}
         {file.is_dir && (
           <span className="mr-1 text-text-tertiary transition-transform duration-200" 
                 style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>
-            ▶
+            {isLoading ? '⏳' : '▶'}
           </span>
         )}
         
-        {/* 占位空间（非目录文件） */}
+        {/* 占位符（非目录文件） */}
         {!file.is_dir && <span className="mr-1 w-3" />}
         
         {/* 文件图标 */}
@@ -128,19 +163,41 @@ export const FileTreeNode = memo<FileTreeNodeProps>(({
       </div>
       
       {/* 子文件 */}
-      {file.is_dir && isExpanded && file.children && (
+      {file.is_dir && isExpanded && hasChildren && (
         <div className="animate-in slide-in-from-top-1 duration-200">
           {file.children.map(child => (
             <FileTreeNode
               key={child.path}
               file={child}
               level={level + 1}
-              isExpanded={false} // 子目录的展开状态由父组件管理
+              isExpanded={expandedFolders.has(child.path)}
               isSelected={false}
+              expandedFolders={expandedFolders}
+              loadingFolders={loadingFolders}
               onToggle={() => {}}
               onSelect={() => {}}
             />
           ))}
+        </div>
+      )}
+      
+      {/* 加载中提示 */}
+      {file.is_dir && isExpanded && isLoading && (
+        <div 
+          style={{ paddingLeft: `${(level + 1) * 16 + 8}px` }} 
+          className="text-xs text-text-tertiary py-1 animate-pulse"
+        >
+          加载中...
+        </div>
+      )}
+      
+      {/* 空文件夹提示 */}
+      {file.is_dir && isExpanded && !isLoading && !hasChildren && (
+        <div 
+          style={{ paddingLeft: `${(level + 1) * 16 + 8}px` }} 
+          className="text-xs text-text-tertiary py-1 italic"
+        >
+          空文件夹
         </div>
       )}
     </div>

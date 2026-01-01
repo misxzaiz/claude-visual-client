@@ -15,7 +15,7 @@ export interface FileInfo {
   modified?: string;
   /** 文件扩展名 */
   extension?: string;
-  /** 子文件/目录列表 */
+  /** 子文件列表（目录） */
   children?: FileInfo[];
   /** 文件类型 */
   file_type?: FileType;
@@ -53,11 +53,19 @@ export interface FileExplorerState {
   loading: boolean;
   /** 错误信息 */
   error: string | null;
+  /** 文件夹内容缓存 */
+  folder_cache: Map<string, FileInfo[]>;
+  /** 正在加载的文件夹 */
+  loading_folders: Set<string>;
 }
 
 export interface FileExplorerActions {
   /** 加载目录内容 */
   load_directory: (path: string) => Promise<void>;
+  /** 加载文件夹内容（懒加载） */
+  load_folder_content: (path: string) => Promise<void>;
+  /** 获取缓存的文件夹内容 */
+  get_cached_folder_content: (path: string) => FileInfo[] | null;
   /** 选择文件 */
   select_file: (file: FileInfo) => void;
   /** 切换文件夹展开状态 */
@@ -83,6 +91,6 @@ export type FileExplorerStore = FileExplorerState & FileExplorerActions;
 export interface FileSystemEvent {
   /** 事件类型 */
   kind: string;
-  /** 影响的文件路径列表 */
+  /** 受影响的文件路径列表 */
   paths: string[];
 }

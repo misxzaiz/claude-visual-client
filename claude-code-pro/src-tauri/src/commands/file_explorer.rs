@@ -15,7 +15,7 @@ pub struct FileInfo {
     pub children: Option<Vec<FileInfo>>,
 }
 
-/// 读取目录内容
+/// 读取目录内容（只读取直接子项，不递归）
 #[tauri::command]
 pub async fn read_directory(path: String) -> Result<Vec<FileInfo>> {
     let path_obj = Path::new(&path);
@@ -67,7 +67,7 @@ pub async fn read_directory(path: String) -> Result<Vec<FileInfo>> {
             size,
             modified,
             extension,
-            children: None, // 子目录内容按需加载
+            children: None, // 子目录内容预留，需要懒加载
         };
         
         files.push(file_info);
@@ -105,7 +105,7 @@ pub async fn get_file_content(path: String) -> Result<String> {
         return Err(AppError::InvalidPath("文件过大，超过1MB限制".to_string()));
     }
     
-let content = fs::read_to_string(path_obj)?;
+    let content = fs::read_to_string(path_obj)?;
     
     Ok(content)
 }

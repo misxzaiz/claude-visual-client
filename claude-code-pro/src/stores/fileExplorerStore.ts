@@ -6,6 +6,24 @@ import { create } from 'zustand';
 import type { FileExplorerStore, FileInfo } from '../types';
 import * as tauri from '../services/tauri';
 
+// 辅助函数：更新文件树中的子节点
+function updateFolderChildren(tree: FileInfo[], folderPath: string, children: FileInfo[]): FileInfo[] {
+  return tree.map(file => {
+    if (file.path === folderPath) {
+      return { ...file, children: Some(children) };
+    }
+    
+    if (file.children) {
+      return {
+        ...file,
+        children: Some(updateFolderChildren(file.children, folderPath, children))
+      };
+    }
+    
+    return file;
+  });
+}
+
 export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
   // 初始状态
   current_path: '',
@@ -15,6 +33,8 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
   search_query: '',
   loading: false,
   error: null,
+  folder_cache: new Map(), // 文件夹内容缓存
+  loading_folders: new Set(), // 正在加载的文件夹
 
   // 加载目录内容
   load_directory: async (path: string) => {
@@ -33,6 +53,65 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
         loading: false 
       });
     }
+  },
+
+  // 加载文件夹内容（懒加载）
+  load_folder_content: async (folderPath: string) => {
+    const { folder_cache } = get();
+    
+    // 检查缓存
+    if (folder_cache.has(folderPath)) {
+      return;
+    }
+    
+    // 检查是否正在加载
+    const { loading_folders } = get();
+    if (loading_folders.has(folderPath)) {
+      return;
+    }
+    
+    set((state) => ({
+      loading_folders: new Set([...state.loading_folders, folderPath])
+    }));
+    
+    try {
+      const children = await tauri.readDirectory(folderPath);
+      
+      set((state) => {
+        // 更新缓存
+        const newCache = new Map(state.folder_cache);
+        newCache.set(folderPath, children);
+        
+        // 更新文件树
+        const updatedTree = updateFolderChildren(state.file_tree, folderPath, children);
+        
+        // 移除加载状态
+        const newLoading = new Set(state.loading_folders);
+        newLoading.delete(folderPath);
+        
+        return {
+          folder_cache: newCache,
+          file_tree: updatedTree,
+          loading_folders: newLoading,
+        };
+      });
+    } catch (error) {
+      set((state) => {
+        // 移除加载状态
+        const newLoading = new Set(state.loading_folders);
+        newLoading.delete(folderPath);
+        
+        return {
+          loading_folders: newLoading,
+          error: error instanceof Error ? error.message : '加载文件夹失败',
+        };
+      });
+    }
+  },
+
+  // 获取缓存的文件夹内容
+  get_cached_folder_content: (folderPath: string) => {
+    return get().folder_cache.get(folderPath) || null;
   },
 
   // 选择文件
