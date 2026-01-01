@@ -38,7 +38,7 @@ impl Default for Config {
         Self {
             claude_cmd: default_cmd,
             work_dir: None,
-            permission_mode: "default".to_string(),
+            permission_mode: "bypassPermissions".to_string(),
             session_dir: None,
             git_bin_path: default_git_bash,
         }
