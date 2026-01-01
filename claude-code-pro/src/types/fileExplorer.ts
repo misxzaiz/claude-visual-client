@@ -57,6 +57,8 @@ export interface FileExplorerState {
   folder_cache: Map<string, FileInfo[]>;
   /** 正在加载的文件夹 */
   loading_folders: Set<string>;
+  /** 是否正在刷新 */
+  is_refreshing: boolean;
 }
 
 export interface FileExplorerActions {
@@ -66,6 +68,8 @@ export interface FileExplorerActions {
   load_folder_content: (path: string) => Promise<void>;
   /** 获取缓存的文件夹内容 */
   get_cached_folder_content: (path: string) => FileInfo[] | null;
+  /** 刷新当前目录（清除缓存并重新加载） */
+  refresh_directory: () => Promise<void>;
   /** 选择文件 */
   select_file: (file: FileInfo) => void;
   /** 切换文件夹展开状态 */

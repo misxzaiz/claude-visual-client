@@ -35,6 +35,7 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
   error: null,
   folder_cache: new Map(), // 文件夹内容缓存
   loading_folders: new Set(), // 正在加载的文件夹
+  is_refreshing: false, // 是否正在刷新
 
   // 加载目录内容
   load_directory: async (path: string) => {
@@ -114,6 +115,39 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
     return get().folder_cache.get(folderPath) || null;
   },
 
+  // 刷新当前目录（清除缓存并重新加载）
+  refresh_directory: async () => {
+    const { current_path } = get();
+    
+    if (!current_path) {
+      return;
+    }
+    
+    set({ is_refreshing: true, error: null });
+    
+    try {
+      // 清除所有缓存
+      set({ 
+        folder_cache: new Map(),
+        expanded_folders: new Set() // 清除展开状态，重新加载
+      });
+      
+      // 重新加载当前目录
+      const files = await tauri.readDirectory(current_path);
+      
+      set({ 
+        current_path,
+        file_tree: files,
+        is_refreshing: false 
+      });
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : '刷新目录失败',
+        is_refreshing: false 
+      });
+    }
+  },
+
   // 选择文件
   select_file: (file: FileInfo) => {
     set({ selected_file: file });
@@ -144,7 +178,7 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
       // 刷新当前目录
       const { current_path } = get();
       if (current_path) {
-        get().load_directory(current_path);
+        get().refresh_directory();
       }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : '创建文件失败' });
@@ -158,7 +192,7 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
       // 刷新当前目录
       const { current_path } = get();
       if (current_path) {
-        get().load_directory(current_path);
+        get().refresh_directory();
       }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : '创建目录失败' });
@@ -172,7 +206,7 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
       // 刷新当前目录
       const { current_path } = get();
       if (current_path) {
-        get().load_directory(current_path);
+        get().refresh_directory();
       }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : '删除文件失败' });
@@ -186,7 +220,7 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
       // 刷新当前目录
       const { current_path } = get();
       if (current_path) {
-        get().load_directory(current_path);
+        get().refresh_directory();
       }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : '重命名文件失败' });

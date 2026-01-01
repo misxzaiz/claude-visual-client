@@ -1,83 +1,128 @@
-import { useEffect, useState } from 'react';
-import { SearchBar } from './SearchBar';
+import { useState, useEffect, useCallback } from 'react';
+import { useFileExplorerStore } from '../../stores';
 import { FileTree } from './FileTree';
 import { FilePreview } from './FilePreview';
-import { useFileExplorerStore, useWorkspaceStore } from '../../stores';
+import { SearchBar } from './SearchBar';
 
 export function FileExplorer() {
   const { 
     current_path, 
     file_tree, 
     selected_file, 
-    loading, 
+    expanded_folders,
+    loading,
+    is_refreshing,
     error,
     load_directory,
-    clear_error 
+    refresh_directory,
+    select_file,
+    toggle_folder,
+    clear_error
   } = useFileExplorerStore();
-  
-  const { getCurrentWorkspace } = useWorkspaceStore();
-  const [isInitialized, setIsInitialized] = useState(false);
 
-  // 获取当前工作区路径
-  const currentWorkspace = getCurrentWorkspace();
-  const workspacePath = currentWorkspace?.path;
-
-  // 初始化文件浏览器
+  // 监听工作区变化，自动加载新工作区
   useEffect(() => {
-    if (workspacePath && !isInitialized) {
-      load_directory(workspacePath);
-      setIsInitialized(true);
-    }
-  }, [workspacePath, isInitialized, load_directory]);
+    const handleWorkspaceChange = (event: CustomEvent) => {
+      const { workspaceId } = event.detail;
+      // 获取当前工作区信息并加载
+      const { getCurrentWorkspace } = useFileExplorerStore.getState();
+      const currentWorkspace = getCurrentWorkspace();
+      
+      if (currentWorkspace) {
+        load_directory(currentWorkspace.path);
+      }
+    };
 
-  // 工作区切换时重新加载
+    window.addEventListener('workspace-changed', handleWorkspaceChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('workspace-changed', handleWorkspaceChange as EventListener);
+    };
+  }, [load_directory]);
+
+  // 快捷键支持
   useEffect(() => {
-    if (workspacePath) {
-      load_directory(workspacePath);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // F5 或 Ctrl+R 刷新
+      if (event.key === 'F5' || (event.ctrlKey && event.key === 'r')) {
+        event.preventDefault();
+        refresh_directory();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [refresh_directory]);
+
+  // 初始化加载工作区目录
+  useEffect(() => {
+    const { getCurrentWorkspace } = useFileExplorerStore.getState();
+    const currentWorkspace = getCurrentWorkspace();
+    
+    if (currentWorkspace && current_path !== currentWorkspace.path) {
+      load_directory(currentWorkspace.path);
     }
-  }, [workspacePath, load_directory]);
+  }, [load_directory, current_path]);
+
+  const handleRefresh = useCallback(() => {
+    clear_error();
+    refresh_directory();
+  }, [clear_error, refresh_directory]);
 
   return (
-    <div className="h-full flex flex-col bg-background-panel">
-      {/* 错误提示 */}
-      {error && (
-        <div className="p-2 border-b border-border bg-danger-faint">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-danger">{error}</span>
-            <button
-              onClick={clear_error}
-              className="text-danger hover:text-text-primary"
-            >
-              ✕
-            </button>
+    <div className="h-full flex flex-col">
+      {/* 顶部工具栏 */}
+      <div className="flex items-center justify-between p-2 border-b border-border bg-background-surface">
+        <div className="flex items-center gap-2 flex-1">
+          {/* 当前路径显示 */}
+          <div className="text-xs text-text-tertiary truncate">
+            {current_path || '未选择工作区'}
           </div>
         </div>
-      )}
+        
+        {/* 刷新按钮 */}
+        <button
+          onClick={handleRefresh}
+          disabled={loading || is_refreshing}
+          className={`
+            p-1.5 rounded-lg transition-all duration-200
+            ${loading || is_refreshing 
+              ? 'text-text-tertiary cursor-not-allowed' 
+              : 'text-text-secondary hover:text-text-primary hover:bg-background-hover'
+            }
+          `}
+          title="刷新目录 (F5)"
+        >
+          <svg 
+            className={`w-4 h-4 ${is_refreshing ? 'animate-spin' : ''}`}
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor" 
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      </div>
 
       {/* 搜索栏 */}
       <SearchBar />
-
-      {/* 当前路径显示 */}
-      {current_path && (
-        <div className="px-3 py-2 border-b border-border bg-background-surface">
-          <div className="text-xs text-text-tertiary truncate" title={current_path}>
-            📍 {current_path}
-          </div>
+      
+      {/* 错误提示 */}
+      {error && (
+        <div className="mx-2 p-2 bg-danger-faint border border-danger/30 rounded-lg text-danger text-xs">
+          {error}
         </div>
       )}
 
       {/* 文件树 */}
       <div className="flex-1 overflow-auto">
-        {loading ? (
-          <div className="flex items-center justify-center py-8 text-text-tertiary">
-            <div className="animate-spin mr-2">⏳</div>
-            加载中...
-          </div>
-        ) : (
-          <FileTree />
-        )}
+        <FileTree />
       </div>
-
+      
       {/* 文件预览 */}
       {selected_file && (
         <FilePreview file={selected_file} />
@@ -85,3 +130,23 @@ export function FileExplorer() {
     </div>
   );
 }
+
+/*
+TODO: 后续优化方案 - 实现文件系统监听自动刷新
+当前实现：手动刷新按钮 + F5快捷键
+目标实现：
+1. 使用 Rust notify crate 监听文件系统变化
+2. 自动检测文件创建、删除、修改、重命名
+3. 实时更新文件树，无需手动刷新
+4. 优化监听性能，避免过度刷新
+5. 处理监听错误和边界情况
+
+技术方案：
+- 后端：使用 notify::RecommendedWatcher 监听工作区目录
+- 前端：通过 Tauri events 接收文件系统变化通知
+- 缓存策略：智能更新受影响的目录节点
+- 性能优化：防抖处理，避免频繁更新
+
+实现优先级：高
+预期收益：用户体验显著提升，工作流程更加流畅
+*/
