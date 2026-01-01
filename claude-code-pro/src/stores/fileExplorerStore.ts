@@ -10,13 +10,13 @@ import * as tauri from '../services/tauri';
 function updateFolderChildren(tree: FileInfo[], folderPath: string, children: FileInfo[]): FileInfo[] {
   return tree.map(file => {
     if (file.path === folderPath) {
-      return { ...file, children: Some(children) };
+      return { ...file, children: children || undefined };
     }
     
     if (file.children) {
       return {
         ...file,
-        children: Some(updateFolderChildren(file.children, folderPath, children))
+        children: updateFolderChildren(file.children, folderPath, children) || undefined
       };
     }
     
