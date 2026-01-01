@@ -1,7 +1,7 @@
 use crate::error::{AppError, Result};
 use crate::models::config::Config;
 use std::process::{Command, Child, Stdio};
-use std::io::{BufReader, Write};
+use std::io::BufReader;
 use std::path::Path;
 
 /// Claude 进程管理器
