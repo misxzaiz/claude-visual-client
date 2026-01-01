@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useFileExplorerStore } from '../../stores';
+import { useFileExplorerStore, useWorkspaceStore } from '../../stores';
 import { FileTree } from './FileTree';
 import { FilePreview } from './FilePreview';
 import { SearchBar } from './SearchBar';
@@ -20,15 +20,18 @@ export function FileExplorer() {
     clear_error
   } = useFileExplorerStore();
 
+  const { getCurrentWorkspace } = useWorkspaceStore();
+
   // 监听工作区变化，自动加载新工作区
   useEffect(() => {
     const handleWorkspaceChange = (event: CustomEvent) => {
       const { workspaceId } = event.detail;
+      console.log('Workspace changed:', workspaceId);
       // 获取当前工作区信息并加载
-      const { getCurrentWorkspace } = useFileExplorerStore.getState();
       const currentWorkspace = getCurrentWorkspace();
       
       if (currentWorkspace) {
+        console.log('Loading workspace:', currentWorkspace.path);
         load_directory(currentWorkspace.path);
       }
     };
@@ -38,7 +41,7 @@ export function FileExplorer() {
     return () => {
       window.removeEventListener('workspace-changed', handleWorkspaceChange as EventListener);
     };
-  }, [load_directory]);
+  }, [load_directory, getCurrentWorkspace]);
 
   // 快捷键支持
   useEffect(() => {
@@ -59,13 +62,13 @@ export function FileExplorer() {
 
   // 初始化加载工作区目录
   useEffect(() => {
-    const { getCurrentWorkspace } = useFileExplorerStore.getState();
     const currentWorkspace = getCurrentWorkspace();
     
     if (currentWorkspace && current_path !== currentWorkspace.path) {
+      console.log('Initial loading workspace:', currentWorkspace.path);
       load_directory(currentWorkspace.path);
     }
-  }, [load_directory, current_path]);
+  }, [load_directory, current_path, getCurrentWorkspace]);
 
   const handleRefresh = useCallback(() => {
     clear_error();
