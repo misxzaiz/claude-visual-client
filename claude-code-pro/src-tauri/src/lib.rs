@@ -1,10 +1,12 @@
 mod error;
 mod models;
 mod services;
+mod commands;
 
 use error::Result;
 use models::config::{Config, HealthStatus};
 use services::config_store::ConfigStore;
+use commands::chat::{start_chat, continue_chat, interrupt_chat};
 use std::sync::Mutex;
 
 /// 全局配置状态
@@ -106,6 +108,10 @@ pub fn run() {
             // 健康检查
             health_check,
             detect_claude,
+            // 聊天相关
+            start_chat,
+            continue_chat,
+            interrupt_chat,
             // 测试
             greet,
         ])

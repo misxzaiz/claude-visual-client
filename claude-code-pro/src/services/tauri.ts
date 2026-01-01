@@ -49,6 +49,25 @@ export async function detectClaude(): Promise<string | null> {
 }
 
 // ============================================================================
+// 聊天相关命令
+// ============================================================================
+
+/** 启动聊天会话 */
+export async function startChat(message: string): Promise<string> {
+  return invoke<string>('start_chat', { message });
+}
+
+/** 继续聊天会话 */
+export async function continueChat(sessionId: string): Promise<void> {
+  return invoke('continue_chat', { sessionId });
+}
+
+/** 中断聊天 */
+export async function interruptChat(sessionId: string): Promise<void> {
+  return invoke('interrupt_chat', { sessionId });
+}
+
+// ============================================================================
 // 测试命令
 // ============================================================================
 

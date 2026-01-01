@@ -3,7 +3,8 @@
  */
 
 import { create } from 'zustand';
-import type { Message, PermissionRequest } from '../types';
+import type { Message, PermissionRequest, StreamEvent } from '../types';
+import * as tauri from '../services/tauri';
 
 interface ChatState {
   /** 消息列表 */
@@ -35,12 +36,14 @@ interface ChatState {
   setPermissionRequest: (request: PermissionRequest | null) => void;
   /** 设置错误 */
   setError: (error: string | null) => void;
+  /** 处理流事件 */
+  handleStreamEvent: (event: StreamEvent) => void;
 
-  /** 发送消息（待实现） */
+  /** 发送消息 */
   sendMessage: (content: string) => Promise<void>;
-  /** 继续会话（待实现） */
+  /** 继续会话 */
   continueChat: () => Promise<void>;
-  /** 中断会话（待实现） */
+  /** 中断会话 */
   interruptChat: () => Promise<void>;
 }
 
@@ -104,19 +107,99 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ error });
   },
 
-  // 待实现的命令
-  sendMessage: async (_content: string) => {
-    // TODO: 实现 send_message Tauri 命令后调用
-    console.log('sendMessage 待实现');
+  handleStreamEvent: (event) => {
+    const state = get();
+
+    switch (event.type) {
+      case 'session_start':
+        set({ conversationId: event.sessionId, isStreaming: true });
+        break;
+
+      case 'text_delta':
+        set((state) => ({
+          currentContent: state.currentContent + event.text
+        }));
+        break;
+
+      case 'session_end':
+        state.finishMessage();
+        set({ isStreaming: false });
+        break;
+
+      case 'error':
+        set({
+          error: event.error,
+          isStreaming: false
+        });
+        break;
+
+      case 'permission_request':
+        set({
+          pendingPermission: {
+            id: crypto.randomUUID(),
+            sessionId: event.sessionId,
+            denials: event.denials,
+            createdAt: new Date().toISOString(),
+          }
+        });
+        break;
+    }
+  },
+
+  sendMessage: async (content: string) => {
+    // 添加用户消息
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content,
+      timestamp: new Date().toISOString(),
+    };
+    get().addMessage(userMessage);
+
+    // 清空当前内容并开始流式传输
+    set({ currentContent: '', isStreaming: true, error: null });
+
+    try {
+      const sessionId = await tauri.startChat(content);
+      set({ conversationId: sessionId });
+    } catch (e) {
+      set({
+        error: e instanceof Error ? e.message : '发送消息失败',
+        isStreaming: false
+      });
+    }
   },
 
   continueChat: async () => {
-    // TODO: 实现 continue_chat Tauri 命令后调用
-    console.log('continueChat 待实现');
+    const { conversationId } = get();
+    if (!conversationId) {
+      set({ error: '没有活动会话' });
+      return;
+    }
+
+    set({ isStreaming: true, error: null, currentContent: '' });
+
+    try {
+      await tauri.continueChat(conversationId);
+    } catch (e) {
+      set({
+        error: e instanceof Error ? e.message : '继续对话失败',
+        isStreaming: false
+      });
+    }
   },
 
   interruptChat: async () => {
-    // TODO: 实现 interrupt_chat Tauri 命令后调用
-    console.log('interruptChat 待实现');
+    const { conversationId } = get();
+    if (!conversationId) return;
+
+    try {
+      await tauri.interruptChat(conversationId);
+      set({ isStreaming: false });
+      // 完成当前消息
+      get().finishMessage();
+    } catch (e) {
+      console.error('中断失败:', e);
+    }
   },
 }));

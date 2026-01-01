@@ -11,6 +11,13 @@ impl From<AppError> for InvokeError {
     }
 }
 
+/// 将 Tauri Error 转换为 AppError
+impl From<tauri::Error> for AppError {
+    fn from(error: tauri::Error) -> Self {
+        AppError::Unknown(error.to_string())
+    }
+}
+
 /// 应用错误类型
 #[derive(Error, Debug)]
 pub enum AppError {
