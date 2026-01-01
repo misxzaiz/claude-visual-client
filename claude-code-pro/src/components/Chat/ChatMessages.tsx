@@ -3,19 +3,22 @@
  */
 
 import { useEffect, useRef } from 'react';
-import type { Message } from '../../types';
+import type { Message, ToolCall } from '../../types';
 import { MessageBubble } from './MessageBubble';
 
 interface ChatMessagesProps {
   messages: Message[];
   currentContent?: string;
   isStreaming?: boolean;
+  /** 当前活动的工具调用（流式传输时） */
+  toolCalls?: ToolCall[];
 }
 
 export function ChatMessages({
   messages,
   currentContent = '',
-  isStreaming = false
+  isStreaming = false,
+  toolCalls
 }: ChatMessagesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +54,7 @@ export function ChatMessages({
                   timestamp: new Date().toISOString(),
                 }}
                 isStreaming={isStreaming}
+                activeToolCalls={toolCalls}
               />
             )}
           </>

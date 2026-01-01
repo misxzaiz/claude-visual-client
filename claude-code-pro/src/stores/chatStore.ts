@@ -3,7 +3,7 @@
  */
 
 import { create } from 'zustand';
-import type { Message, PermissionRequest, StreamEvent } from '../types';
+import type { Message, PermissionRequest, StreamEvent, ToolCall } from '../types';
 import * as tauri from '../services/tauri';
 
 interface ChatState {
@@ -19,6 +19,8 @@ interface ChatState {
   pendingPermission: PermissionRequest | null;
   /** 错误 */
   error: string | null;
+  /** 当前会话的工具调用列表 */
+  toolCalls: ToolCall[];
 
   /** 添加消息 */
   addMessage: (message: Message) => void;
@@ -54,6 +56,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   currentContent: '',
   pendingPermission: null,
   error: null,
+  toolCalls: [],
 
   addMessage: (message) => {
     set((state) => ({
@@ -84,17 +87,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   finishMessage: () => {
-    const { currentContent, messages } = get();
+    const { currentContent, messages, toolCalls } = get();
     if (currentContent) {
       const newMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: currentContent,
         timestamp: new Date().toISOString(),
+        toolCalls: toolCalls.length > 0 ? [...toolCalls] : undefined,
       };
       set({
         messages: [...messages, newMessage],
-        currentContent: ''
+        currentContent: '',
+        toolCalls: []
       });
     }
   },
@@ -166,6 +171,31 @@ export const useChatStore = create<ChatState>((set, get) => ({
           }
         });
         break;
+
+      case 'tool_start': {
+        const newToolCall: ToolCall = {
+          id: crypto.randomUUID(),
+          name: event.toolName,
+          status: 'running',
+          input: event.input,
+          startedAt: new Date().toISOString(),
+        };
+        set((state) => ({
+          toolCalls: [...state.toolCalls, newToolCall]
+        }));
+        break;
+      }
+
+      case 'tool_end': {
+        set((state) => ({
+          toolCalls: state.toolCalls.map(tc =>
+            tc.name === event.toolName && tc.status === 'running'
+              ? { ...tc, status: 'completed', output: event.output, completedAt: new Date().toISOString() }
+              : tc
+          )
+        }));
+        break;
+      }
     }
   },
 
@@ -179,8 +209,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     };
     get().addMessage(userMessage);
 
-    // 清空当前内容并开始流式传输
-    set({ currentContent: '', isStreaming: true, error: null });
+    // 清空当前内容和工具调用，开始流式传输
+    set({ currentContent: '', isStreaming: true, error: null, toolCalls: [] });
 
     try {
       const sessionId = await tauri.startChat(content);

@@ -11,6 +11,7 @@ function App() {
     messages,
     currentContent,
     isStreaming,
+    toolCalls,
     sendMessage,
     interruptChat,
     handleStreamEvent,
@@ -73,6 +74,7 @@ function App() {
           messages={messages}
           currentContent={currentContent}
           isStreaming={isStreaming}
+          toolCalls={toolCalls}
         />
 
         {/* 输入区 */}

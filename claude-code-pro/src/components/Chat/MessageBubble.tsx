@@ -4,10 +4,13 @@
 
 import { type Message } from '../../types';
 import { clsx } from 'clsx';
+import { ToolCallTimeline } from './ToolCallTimeline';
 
 interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
+  /** 当前活动的工具调用（流式传输时） */
+  activeToolCalls?: Message['toolCalls'];
 }
 
 /** 格式化消息内容（简单的 Markdown 处理） */
@@ -26,9 +29,12 @@ function formatContent(content: string) {
   return content;
 }
 
-export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
+export function MessageBubble({ message, isStreaming, activeToolCalls }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
+
+  // 显示的工具调用：流式时用 activeToolCalls，否则用 message.toolCalls
+  const toolCallsToShow = isStreaming ? activeToolCalls : message.toolCalls;
 
   return (
     <div
@@ -56,6 +62,10 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
         />
         {isStreaming && (
           <span className="inline-block w-2 h-4 bg-text-muted animate-pulse ml-1" />
+        )}
+        {/* 工具调用时间线 */}
+        {!isUser && !isSystem && toolCallsToShow && toolCallsToShow.length > 0 && (
+          <ToolCallTimeline toolCalls={toolCallsToShow} />
         )}
       </div>
     </div>
