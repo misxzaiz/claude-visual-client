@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import type { Message, PermissionRequest, StreamEvent } from '../types';
 import * as tauri from '../services/tauri';
-import { useToolPanelStore, updateToolByToolUseId } from './toolPanelStore';
+import { useToolPanelStore } from './toolPanelStore';
 
 interface ChatState {
   /** 消息列表 */
@@ -305,7 +305,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ isStreaming: true, error: null, currentContent: '' });
 
     try {
-      await tauri.continueChat(conversationId);
+      await tauri.continueChat(conversationId, '');
     } catch (e) {
       set({
         error: e instanceof Error ? e.message : '继续对话失败',

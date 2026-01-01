@@ -27,7 +27,7 @@ interface ToolPanelState {
   clearTools: () => void;
 }
 
-export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
+export const useToolPanelStore = create<ToolPanelState>((set) => ({
   isOpen: true,  // 默认展开
   selectedToolId: null,
   tools: [],

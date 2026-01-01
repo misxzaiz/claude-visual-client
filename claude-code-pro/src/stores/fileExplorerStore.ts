@@ -40,18 +40,18 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
   // 加载目录内容
   load_directory: async (path: string) => {
     set({ loading: true, error: null });
-    
+
     try {
-      const files = await tauri.readDirectory(path);
-      set({ 
+      const files = await tauri.readDirectory(path) as FileInfo[];
+      set({
         current_path: path,
         file_tree: files,
-        loading: false 
+        loading: false
       });
     } catch (error) {
-      set({ 
+      set({
         error: error instanceof Error ? error.message : '加载目录失败',
-        loading: false 
+        loading: false
       });
     }
   },
@@ -76,8 +76,8 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
     }));
     
     try {
-      const children = await tauri.readDirectory(folderPath);
-      
+      const children = await tauri.readDirectory(folderPath) as FileInfo[];
+
       set((state) => {
         // 更新缓存
         const newCache = new Map(state.folder_cache);
@@ -133,7 +133,7 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
       });
       
       // 重新加载当前目录
-      const files = await tauri.readDirectory(current_path);
+      const files = await tauri.readDirectory(current_path) as FileInfo[];
       
       set({ 
         current_path,
@@ -230,7 +230,7 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
   // 获取文件内容
   get_file_content: async (path: string) => {
     try {
-      return await tauri.getFileContent(path);
+      return await tauri.getFileContent(path) as string;
     } catch (error) {
       set({ error: error instanceof Error ? error.message : '读取文件内容失败' });
       throw error;

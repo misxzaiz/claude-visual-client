@@ -2,9 +2,14 @@ import { useEffect, useState } from 'react';
 import { Layout, Header, Sidebar, Main, StatusIndicator, WorkspaceSelector, SettingsModal, FileExplorer } from './components/Common';
 import { ChatMessages, ChatInput } from './components/Chat';
 import { ToolPanel } from './components/ToolPanel';
+import { EditorPanel } from './components/Editor';
+import { SidebarTabs } from './components/SidebarTabs';
 import { useConfigStore, useChatStore, useWorkspaceStore } from './stores';
 import { useChatEvent } from './hooks';
 import './index.css';
+
+/** Sidebar Tab 类型 */
+type SidebarTab = 'chat' | 'files';
 
 function App() {
   const { healthStatus, loadConfig, refreshHealth } = useConfigStore();
@@ -21,6 +26,7 @@ function App() {
   const { getCurrentWorkspace } = useWorkspaceStore();
   const [showSettings, setShowSettings] = useState(false);
   const [showNewConversationConfirm, setShowNewConversationConfirm] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('files');
 
   // 初始化配置
   useEffect(() => {
@@ -36,21 +42,17 @@ function App() {
   // 新对话处理
   const handleNewConversation = () => {
     if (messages.length > 0) {
-      // 如果有对话内容，显示确认对话框
       setShowNewConversationConfirm(true);
     } else {
-      // 如果没有对话内容，直接清空
       clearMessages();
     }
   };
 
-  // 确认新对话
   const confirmNewConversation = () => {
     clearMessages();
     setShowNewConversationConfirm(false);
   };
 
-  // 取消新对话
   const cancelNewConversation = () => {
     setShowNewConversationConfirm(false);
   };
@@ -61,29 +63,45 @@ function App() {
         {/* 工作区选择器 */}
         <WorkspaceSelector />
 
-        {/* 新建对话按钮 */}
-        <div className="p-3">
-          <button 
-            onClick={handleNewConversation}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2.5
-                           bg-primary text-white rounded-xl font-medium text-sm
-                           hover:bg-primary-hover transition-colors
-                           shadow-glow">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            <span>新对话</span>
-          </button>
-        </div>
+        {/* Tab 切换 */}
+        <SidebarTabs activeTab={sidebarTab} onTabChange={setSidebarTab} />
 
-        {/* 文件浏览器 */}
-        <div className="flex-1 border-t border-border">
-          <FileExplorer />
+        {/* 新建对话按钮 - 仅在会话 Tab 显示 */}
+        {sidebarTab === 'chat' && (
+          <div className="p-3">
+            <button
+              onClick={handleNewConversation}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5
+                             bg-primary text-white rounded-xl font-medium text-sm
+                             hover:bg-primary-hover transition-colors
+                             shadow-glow">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>新对话</span>
+            </button>
+          </div>
+        )}
+
+        {/* 内容区域 */}
+        <div className="flex-1 overflow-hidden">
+          {sidebarTab === 'files' ? (
+            <FileExplorer />
+          ) : (
+            <div className="h-full flex flex-col p-3">
+              <div className="text-xs font-medium text-text-tertiary mb-2">今天</div>
+              {messages.length === 0 ? (
+                <div className="text-sm text-text-muted">暂无对话历史</div>
+              ) : (
+                <div className="text-sm text-text-primary">当前对话</div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 底部设置 */}
         <div className="p-3 border-t border-border">
-          <button 
+          <button
             onClick={() => setShowSettings(true)}
             className="w-full flex items-center gap-2 px-3 py-2
                             rounded-lg text-sm text-text-tertiary
@@ -97,35 +115,40 @@ function App() {
         </div>
       </Sidebar>
 
-      <Main>
-        <Header title={currentWorkspace ? `${currentWorkspace.name} - Claude Code Pro` : 'Claude Code Pro'}>
-          <StatusIndicator
-            status={healthStatus?.claudeAvailable ? 'online' : 'offline'}
-            label={healthStatus?.claudeVersion ?? 'Claude 未连接'}
+      <Main className="flex-row">
+        {/* 左侧：编辑器 */}
+        <div className="w-1/2 min-w-[300px] border-r border-border flex flex-col">
+          <EditorPanel />
+        </div>
+
+        {/* 右侧：聊天区域 */}
+        <div className="flex-1 flex flex-col min-w-[300px]">
+          <Header title={currentWorkspace ? `${currentWorkspace.name} - Claude Code Pro` : 'Claude Code Pro'}>
+            <StatusIndicator
+              status={healthStatus?.claudeAvailable ? 'online' : 'offline'}
+              label={healthStatus?.claudeVersion ?? 'Claude 未连接'}
+            />
+          </Header>
+
+          {error && (
+            <div className="mx-5 mt-4 p-3 bg-danger-faint border border-danger/30 rounded-xl text-danger text-sm">
+              {error}
+            </div>
+          )}
+
+          <ChatMessages
+            messages={messages}
+            currentContent={currentContent}
+            isStreaming={isStreaming}
           />
-        </Header>
 
-        {/* 错误显示 */}
-        {error && (
-          <div className="mx-5 mt-4 p-3 bg-danger-faint border border-danger/30 rounded-xl text-danger text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* 聊天区域 */}
-        <ChatMessages
-          messages={messages}
-          currentContent={currentContent}
-          isStreaming={isStreaming}
-        />
-
-        {/* 输入区 */}
-        <ChatInput
-          onSend={sendMessage}
-          onInterrupt={interruptChat}
-          disabled={!healthStatus?.claudeAvailable}
-          isStreaming={isStreaming}
-        />
+          <ChatInput
+            onSend={sendMessage}
+            onInterrupt={interruptChat}
+            disabled={!healthStatus?.claudeAvailable}
+            isStreaming={isStreaming}
+          />
+        </div>
       </Main>
 
       {/* 工具面板 */}

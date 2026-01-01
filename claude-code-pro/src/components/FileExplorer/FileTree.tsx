@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { FileTreeNode } from './FileTreeNode';
-import { useFileExplorerStore } from '../../stores';
+import { useFileExplorerStore, useFileEditorStore } from '../../stores';
 import type { FileInfo } from '../../types';
 
 interface FileTreeProps {
@@ -37,17 +37,19 @@ const filterFiles = (files: FileInfo[], query: string): FileInfo[] => {
 };
 
 export const FileTree = memo<FileTreeProps>(({ files, className = '' }) => {
-  const { 
-    selected_file, 
-    expanded_folders, 
+  const {
+    selected_file,
+    expanded_folders,
     loading_folders,
-    toggle_folder, 
+    toggle_folder,
     select_file,
-    search_query 
+    search_query
   } = useFileExplorerStore();
-  
+
+  const { openFile } = useFileEditorStore();
+
   const fileTree = files || useFileExplorerStore().file_tree;
-  
+
   // 应用搜索过滤
   const filteredFiles = useMemo(() => {
     return filterFiles(fileTree, search_query);
@@ -59,6 +61,10 @@ export const FileTree = memo<FileTreeProps>(({ files, className = '' }) => {
 
   const handleSelectFile = (file: FileInfo) => {
     select_file(file);
+    // 打开文件编辑器
+    if (!file.is_dir) {
+      openFile(file.path, file.name);
+    }
   };
 
   if (filteredFiles.length === 0) {

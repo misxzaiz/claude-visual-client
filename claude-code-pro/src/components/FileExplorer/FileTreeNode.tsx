@@ -165,7 +165,7 @@ export const FileTreeNode = memo<FileTreeNodeProps>(({
       {/* 子文件 */}
       {file.is_dir && isExpanded && hasChildren && (
         <div className="animate-in slide-in-from-top-1 duration-200">
-          {file.children.map(child => (
+          {file.children?.map(child => (
             <FileTreeNode
               key={child.path}
               file={child}
