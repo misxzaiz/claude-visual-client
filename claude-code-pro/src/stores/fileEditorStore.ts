@@ -58,10 +58,12 @@ export const useFileEditorStore = create<FileEditorStore>((set, get) => ({
 
   // 打开文件
   openFile: async (path: string, name: string) => {
+    console.log('[Editor] 打开文件:', { path, name });
     set({ isOpen: true, status: 'loading', error: null });
 
     try {
       const content = await tauri.getFileContent(path) as string;
+      console.log('[Editor] 文件内容长度:', content?.length);
       const language = getLanguageFromPath(path);
 
       set({
@@ -79,6 +81,7 @@ export const useFileEditorStore = create<FileEditorStore>((set, get) => ({
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '读取文件失败';
+      console.error('[Editor] 打开文件失败:', error);
       set({
         status: 'error',
         error: errorMessage,

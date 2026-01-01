@@ -11,13 +11,27 @@ interface EditorPanelProps {
 }
 
 export function EditorPanel({ className = '' }: EditorPanelProps) {
-  const { currentFile, setContent, saveFile, isOpen } = useFileEditorStore();
+  const { currentFile, setContent, saveFile, isOpen, status, error } = useFileEditorStore();
+
+  // 显示错误状态
+  if (error) {
+    return (
+      <div className={`h-full flex flex-col ${className}`}>
+        <div className="flex-1 flex items-center justify-center text-danger text-sm px-4">
+          <div className="text-center">
+            <div className="text-lg mb-2">⚠️</div>
+            <div>{error}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isOpen || !currentFile) {
     return (
       <div className={`h-full flex flex-col ${className}`}>
         <div className="flex-1 flex items-center justify-center text-text-tertiary text-sm">
-          未打开文件
+          {status === 'loading' ? '加载中...' : '未打开文件'}
         </div>
       </div>
     );

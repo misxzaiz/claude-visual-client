@@ -1,6 +1,6 @@
 import { memo, useEffect } from 'react';
 import { FileIcon } from './FileIcon';
-import { useFileExplorerStore } from '../../stores';
+import { useFileExplorerStore, useFileEditorStore } from '../../stores';
 import type { FileInfo } from '../../types';
 
 interface FileTreeNodeProps {
@@ -10,8 +10,6 @@ interface FileTreeNodeProps {
   isSelected: boolean;
   expandedFolders: Set<string>;
   loadingFolders: Set<string>;
-  onToggle: () => void;
-  onSelect: () => void;
 }
 
 // 格式化文件大小
@@ -57,10 +55,9 @@ export const FileTreeNode = memo<FileTreeNodeProps>(({
   isSelected,
   expandedFolders,
   loadingFolders,
-  onToggle,
-  onSelect
 }) => {
-  const { load_folder_content, get_cached_folder_content } = useFileExplorerStore();
+  const { load_folder_content, get_cached_folder_content, toggle_folder } = useFileExplorerStore();
+  const { openFile } = useFileEditorStore();
 
   // 懒加载逻辑：展开文件夹时加载内容
   useEffect(() => {
@@ -76,21 +73,23 @@ export const FileTreeNode = memo<FileTreeNodeProps>(({
 
   const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (file.is_dir) {
-      onToggle();
-      
+      // 直接调用 store 的 toggle_folder
+      toggle_folder(file.path);
+
       // 展开时检查是否需要加载内容
       if (!isExpanded) {
         const cached = get_cached_folder_content(file.path);
-        
+
         // 如果没有缓存且没有子项，触发加载
         if (!cached && (!file.children || file.children.length === 0)) {
           await load_folder_content(file.path);
         }
       }
     } else {
-      onSelect();
+      // 直接调用 store 的 openFile
+      await openFile(file.path, file.name);
     }
   };
 
@@ -174,8 +173,6 @@ export const FileTreeNode = memo<FileTreeNodeProps>(({
               isSelected={false}
               expandedFolders={expandedFolders}
               loadingFolders={loadingFolders}
-              onToggle={() => {}}
-              onSelect={() => {}}
             />
           ))}
         </div>

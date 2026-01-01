@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { FileTreeNode } from './FileTreeNode';
-import { useFileExplorerStore, useFileEditorStore } from '../../stores';
+import { useFileExplorerStore } from '../../stores';
 import type { FileInfo } from '../../types';
 
 interface FileTreeProps {
@@ -41,12 +41,8 @@ export const FileTree = memo<FileTreeProps>(({ files, className = '' }) => {
     selected_file,
     expanded_folders,
     loading_folders,
-    toggle_folder,
-    select_file,
     search_query
   } = useFileExplorerStore();
-
-  const { openFile } = useFileEditorStore();
 
   const fileTree = files || useFileExplorerStore().file_tree;
 
@@ -54,18 +50,6 @@ export const FileTree = memo<FileTreeProps>(({ files, className = '' }) => {
   const filteredFiles = useMemo(() => {
     return filterFiles(fileTree, search_query);
   }, [fileTree, search_query]);
-
-  const handleToggleFolder = (path: string) => {
-    toggle_folder(path);
-  };
-
-  const handleSelectFile = (file: FileInfo) => {
-    select_file(file);
-    // 打开文件编辑器
-    if (!file.is_dir) {
-      openFile(file.path, file.name);
-    }
-  };
 
   if (filteredFiles.length === 0) {
     return (
@@ -89,8 +73,6 @@ export const FileTree = memo<FileTreeProps>(({ files, className = '' }) => {
           isSelected={selected_file?.path === file.path}
           expandedFolders={expanded_folders}
           loadingFolders={loading_folders}
-          onToggle={() => handleToggleFolder(file.path)}
-          onSelect={() => handleSelectFile(file)}
         />
       ))}
     </div>
