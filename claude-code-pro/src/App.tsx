@@ -1,50 +1,81 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useEffect } from 'react';
+import { Layout, Header, Sidebar, Main, StatusIndicator } from './components/Common';
+import { useConfigStore } from './stores';
+import './index.css';
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const { healthStatus, loadConfig, refreshHealth } = useConfigStore();
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  useEffect(() => {
+    loadConfig();
+    refreshHealth();
+  }, []);
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <Layout>
+      <Sidebar>
+        <div className="p-4 border-b border-border">
+          <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
+            Claude Code Pro
+          </h2>
+        </div>
+        <nav className="flex-1 overflow-y-auto p-2">
+          {/* TODO: 会话列表 */}
+          <div className="text-sm text-text-muted p-2">
+            暂无会话
+          </div>
+        </nav>
+        <div className="p-4 border-t border-border">
+          {/* TODO: 设置按钮 */}
+          <div className="text-xs text-text-muted">
+            v0.1.0
+          </div>
+        </div>
+      </Sidebar>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+      <Main>
+        <Header
+          title="Claude Chat"
+        >
+          <StatusIndicator
+            status={healthStatus?.claudeAvailable ? 'online' : 'offline'}
+            label={healthStatus?.claudeVersion ?? 'Claude 未连接'}
+          />
+        </Header>
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* 聊天消息区 */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="max-w-3xl mx-auto">
+              <div className="text-center text-text-muted py-20">
+                <p className="text-lg mb-2">欢迎使用 Claude Code Pro</p>
+                <p className="text-sm">开始与 Claude 对话</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 输入区 */}
+          <div className="border-t border-border p-4">
+            <div className="max-w-3xl mx-auto">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
+                  className="flex-1 px-4 py-2 bg-background-tertiary border border-border rounded-md text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary"
+                  disabled={!healthStatus?.claudeAvailable}
+                />
+                <button
+                  className="px-6 py-2 bg-primary text-background rounded-md hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!healthStatus?.claudeAvailable}
+                >
+                  发送
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Main>
+    </Layout>
   );
 }
 

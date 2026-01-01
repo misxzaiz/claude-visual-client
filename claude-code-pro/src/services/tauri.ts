@@ -1,0 +1,58 @@
+/**
+ * Tauri 命令服务包装器
+ */
+
+import { invoke } from '@tauri-apps/api/core';
+import type { Config, HealthStatus } from '../types';
+
+// ============================================================================
+// 配置相关命令
+// ============================================================================
+
+/** 获取配置 */
+export async function getConfig(): Promise<Config> {
+  return invoke<Config>('get_config');
+}
+
+/** 更新配置 */
+export async function updateConfig(config: Config): Promise<void> {
+  return invoke('update_config', { config });
+}
+
+/** 设置工作目录 */
+export async function setWorkDir(path: string | null): Promise<void> {
+  return invoke('set_work_dir', { path });
+}
+
+/** 设置 Claude 命令路径 */
+export async function setClaudeCmd(cmd: string): Promise<void> {
+  return invoke('set_claude_cmd', { cmd });
+}
+
+/** 设置权限模式 */
+export async function setPermissionMode(mode: string): Promise<void> {
+  return invoke('set_permission_mode', { mode });
+}
+
+// ============================================================================
+// 健康检查命令
+// ============================================================================
+
+/** 健康检查 */
+export async function healthCheck(): Promise<HealthStatus> {
+  return invoke<HealthStatus>('health_check');
+}
+
+/** 检测 Claude CLI */
+export async function detectClaude(): Promise<string | null> {
+  return invoke<string | null>('detect_claude');
+}
+
+// ============================================================================
+// 测试命令
+// ============================================================================
+
+/** 测试命令 */
+export async function greet(name: string): Promise<string> {
+  return invoke<string>('greet', { name });
+}
