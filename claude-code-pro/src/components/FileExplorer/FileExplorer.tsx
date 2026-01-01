@@ -1,22 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useFileExplorerStore, useWorkspaceStore } from '../../stores';
 import { FileTree } from './FileTree';
-import { FilePreview } from './FilePreview';
 import { SearchBar } from './SearchBar';
 
 export function FileExplorer() {
-  const { 
-    current_path, 
-    file_tree, 
-    selected_file, 
-    expanded_folders,
+  const {
+    current_path,
     loading,
     is_refreshing,
     error,
     load_directory,
     refresh_directory,
-    select_file,
-    toggle_folder,
     clear_error
   } = useFileExplorerStore();
 
@@ -125,11 +119,6 @@ export function FileExplorer() {
       <div className="flex-1 overflow-auto">
         <FileTree />
       </div>
-      
-      {/* 文件预览 */}
-      {selected_file && (
-        <FilePreview file={selected_file} />
-      )}
     </div>
   );
 }
