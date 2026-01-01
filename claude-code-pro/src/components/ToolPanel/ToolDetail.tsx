@@ -2,7 +2,6 @@
  * 工具详情组件
  */
 
-import React from 'react';
 import { useToolPanelStore } from '../../stores';
 import type { ToolCall } from '../../types';
 import { clsx } from 'clsx';

@@ -3,7 +3,6 @@
  */
 
 import { type Message } from '../../types';
-import { clsx } from 'clsx';
 import { useToolPanelStore } from '../../stores';
 
 interface MessageBubbleProps {
@@ -15,7 +14,6 @@ interface MessageBubbleProps {
 function formatContent(content: string) {
   // 代码块
   content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-    const language = lang || '';
     const langLabel = lang ? `<span class="text-xs text-text-tertiary select-none float-right mt-1 ml-2">${lang}</span>` : '';
     return `<div class="relative my-4"><div class="flex items-center justify-between bg-background-surface px-4 py-2 rounded-t-xl border-b border-border"><span class="text-xs text-text-tertiary font-medium">代码</span>${langLabel}</div><pre class="bg-background-elevated p-4 rounded-b-xl overflow-x-auto border-t-0 border shadow-soft"><code class="text-sm text-text-secondary font-mono leading-relaxed">${code.trim()}</code></pre></div>`;
   });

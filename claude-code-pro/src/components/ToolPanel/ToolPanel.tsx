@@ -2,7 +2,6 @@
  * 工具面板主组件
  */
 
-import React from 'react';
 import { useToolPanelStore } from '../../stores';
 import { clsx } from 'clsx';
 import { ToolList } from './ToolList';

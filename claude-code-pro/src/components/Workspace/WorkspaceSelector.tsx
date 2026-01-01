@@ -2,7 +2,7 @@
  * 工作区选择器组件
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useWorkspaceStore } from '../../stores';
 import { Button } from '../Common';
 import { CreateWorkspaceModal } from './CreateWorkspaceModal';
@@ -11,7 +11,6 @@ export function WorkspaceSelector() {
   const {
     workspaces,
     currentWorkspaceId,
-    getCurrentWorkspace,
     switchWorkspace,
     deleteWorkspace,
     error,
@@ -20,8 +19,6 @@ export function WorkspaceSelector() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-
-  const currentWorkspace = getCurrentWorkspace();
 
   const handleSwitchWorkspace = async (id: string) => {
     if (id === currentWorkspaceId) return;

@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useConfigStore } from '../../stores';
 import { Button } from '../Common';
-import type { Config } from '../../types';
+import type { Config, PermissionMode } from '../../types';
 
 interface SettingsModalProps {
   onClose: () => void;
 }
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
-  const { config, loading, error, setPermissionMode, setClaudeCmd, updateConfig } = useConfigStore();
+  const { config, loading, error, updateConfig } = useConfigStore();
   const [localConfig, setLocalConfig] = useState<Config | null>(config);
 
   const handleSave = async () => {
@@ -22,7 +22,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     }
   };
 
-  const handlePermissionModeChange = (mode: string) => {
+  const handlePermissionModeChange = (mode: PermissionMode) => {
     if (!localConfig) return;
     setLocalConfig({ ...localConfig, permissionMode: mode });
   };
@@ -89,7 +89,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           </label>
           <select
             value={localConfig.permissionMode}
-            onChange={(e) => handlePermissionModeChange(e.target.value)}
+            onChange={(e) => handlePermissionModeChange(e.target.value as PermissionMode)}
             className="w-full px-3 py-2 bg-background-surface border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="default">默认（每次询问）</option>

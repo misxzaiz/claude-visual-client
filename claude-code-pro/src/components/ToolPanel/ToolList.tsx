@@ -2,7 +2,7 @@
  * 工具列表组件
  */
 
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useToolPanelStore } from '../../stores';
 import { clsx } from 'clsx';
 import type { ToolCall } from '../../types';
