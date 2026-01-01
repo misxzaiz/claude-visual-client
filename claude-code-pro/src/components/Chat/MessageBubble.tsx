@@ -17,11 +17,11 @@ function formatContent(content: string) {
   content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
     const language = lang || '';
     const langLabel = lang ? `<span class="text-xs text-text-tertiary select-none float-right mt-1 ml-2">${lang}</span>` : '';
-    return `<div class="relative my-3"><div class="flex items-center justify-between bg-background-surface px-3 py-1.5 rounded-t-lg border-b border-border-subtle"><span class="text-xs text-text-tertiary">代码</span>${langLabel}</div><pre class="bg-background-elevated p-3 rounded-b-lg overflow-x-auto"><code class="text-sm text-text-secondary">${code.trim()}</code></pre></div>`;
+    return `<div class="relative my-4"><div class="flex items-center justify-between bg-background-surface px-4 py-2 rounded-t-xl border-b border-border"><span class="text-xs text-text-tertiary font-medium">代码</span>${langLabel}</div><pre class="bg-background-elevated p-4 rounded-b-xl overflow-x-auto border-t-0 border shadow-soft"><code class="text-sm text-text-secondary font-mono leading-relaxed">${code.trim()}</code></pre></div>`;
   });
 
   // 行内代码
-  content = content.replace(/`([^`]+)`/g, '<code class="bg-primary-faint text-primary px-1.5 py-0.5 rounded text-sm font-mono">$1</code>');
+  content = content.replace(/`([^`]+)`/g, '<code class="bg-background-surface text-primary px-2 py-1 rounded-lg text-sm font-mono border border-border-subtle">$1</code>');
 
   // 粗体
   content = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -42,12 +42,12 @@ function ToolSummary({ summary, onClick }: { summary: NonNullable<Message['toolS
       {summary.names.slice(0, 4).map((name) => (
         <span
           key={name}
-          className="inline-flex items-center gap-1.5 px-2 py-1
-                   bg-background-surface border border-border-subtle
+          className="inline-flex items-center gap-1.5 px-3 py-1.5
+                   bg-background-surface border border-border
                    rounded-lg text-xs text-text-tertiary
-                   font-mono"
+                   font-mono shadow-soft hover:shadow-medium transition-shadow"
         >
-          <span className="w-1 h-1 rounded-full bg-success" />
+          <span className="w-1.5 h-1.5 rounded-full bg-success shadow-soft" />
           {name}
         </span>
       ))}

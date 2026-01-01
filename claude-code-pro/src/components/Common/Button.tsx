@@ -17,10 +17,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = 'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed';
 
     const variantStyles = {
-      primary: 'bg-gradient-to-r from-primary to-primary-600 text-white hover:from-primary-hover hover:to-primary-700',
-      secondary: 'bg-background-surface text-text-primary border border-border-subtle hover:bg-background-hover',
-      danger: 'bg-danger text-white hover:bg-danger/90',
-      ghost: 'text-text-primary hover:bg-background-hover',
+      primary: 'bg-gradient-to-r from-primary to-primary-600 text-white hover:from-primary-hover hover:to-primary-700 shadow-soft hover:shadow-medium transition-all',
+      secondary: 'bg-background-surface text-text-primary border border-border hover:bg-background-hover hover:border-border-strong transition-all',
+      danger: 'bg-danger text-white hover:bg-danger/90 shadow-soft hover:shadow-medium transition-all',
+      ghost: 'text-text-primary hover:bg-background-hover transition-all',
     };
 
     const sizeStyles = {

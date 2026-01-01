@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -22,63 +22,58 @@ export default {
           faint: 'rgba(59, 130, 246, 0.15)',
           glow: 'rgba(59, 130, 246, 0.3)',
         },
-        // 背景色系 - 分层深色
+        // 背景色系 - 优化的分层深色
         background: {
-          base: '#0A0A0B',           // 全局背景
-          elevated: '#141416',        // 侧边栏/面板
-          surface: '#1C1C1E',         // 卡片/输入框
-          hover: '#27272A',           // 悬停
-          active: '#2D2D30',          // 激活
+          base: '#0F0F11',           // 全局背景 - 稍微提亮
+          elevated: '#1A1A1F',        // 侧边栏/面板 - 增加层次
+          surface: '#25252B',         // 卡片/输入框 - 更明显的区分
+          hover: '#2D2D35',           // 悬停 - 增强交互反馈
+          active: '#35353D',          // 激活 - 更强的反馈
           tertiary: '#21262D',         // 兼容旧名
           secondary: '#161B22',       // 兼容旧名
         },
-        // 边框色系
+        // 边框色系 - 增强对比度
         border: {
-          DEFAULT: 'rgba(255, 255, 255, 0.1)',
-          subtle: 'rgba(255, 255, 255, 0.06)',
-          default: 'rgba(255, 255, 255, 0.1)',
-          strong: 'rgba(255, 255, 255, 0.15)',
-          muted: 'rgba(255, 255, 255, 0.08)',
+          DEFAULT: 'rgba(255, 255, 255, 0.15)',
+          subtle: 'rgba(255, 255, 255, 0.08)',
+          default: 'rgba(255, 255, 255, 0.15)',
+          strong: 'rgba(255, 255, 255, 0.25)',
+          muted: 'rgba(255, 255, 255, 0.12)',
+          focus: 'rgba(59, 130, 246, 0.5)',
         },
-        // 文本色系
+        // 文本色系 - 优化可读性
         text: {
-          DEFAULT: '#FAFAFA',
-          primary: '#FAFAFA',          // 主要文本
-          secondary: '#A1A1AA',        // 次要文本
-          tertiary: '#71717A',         // 辅助文本
-          muted: '#52525B',            // 弱化文本
+          DEFAULT: '#F8F8F8',
+          primary: '#F8F8F8',          // 主要文本 - 稍微柔和
+          secondary: '#B4B4B8',        // 次要文本 - 增加对比度
+          tertiary: '#8E8E93',         // 辅助文本 - 提高可读性
+          muted: '#6D6D70',            // 弱化文本 - 保持可见性
         },
-        // 语义化颜色
+        // 语义化颜色 - 增加温度感
         success: {
-          DEFAULT: '#22C55E',
-          faint: 'rgba(34, 197, 94, 0.15)',
+          DEFAULT: '#34D399',
+          faint: 'rgba(52, 211, 153, 0.15)',
         },
         warning: {
-          DEFAULT: '#F59E0B',
-          faint: 'rgba(245, 158, 11, 0.15)',
+          DEFAULT: '#FBBF24',
+          faint: 'rgba(251, 191, 36, 0.15)',
         },
         danger: {
-          DEFAULT: '#EF4444',
-          faint: 'rgba(239, 68, 68, 0.15)',
+          DEFAULT: '#F87171',
+          faint: 'rgba(248, 113, 113, 0.15)',
         },
         info: {
-          DEFAULT: '#06B6D4',
-          faint: 'rgba(6, 182, 212, 0.15)',
+          DEFAULT: '#60A5FA',
+          faint: 'rgba(96, 165, 250, 0.15)',
         },
-        // 兼容旧配色
-        'text-success': '#22C55E',
-        'text-warning': '#F59E0B',
-        'text-error': '#EF4444',
-        'text-info': '#06B6D4',
-        'text-muted': '#71717A',
-        'text-subtle': '#A1A1AA',
       },
-      // 阴影
+      // 阴影 - 更自然的阴影系统
       boxShadow: {
-        'soft': '0 2px 8px rgba(0, 0, 0, 0.3)',
-        'medium': '0 4px 16px rgba(0, 0, 0, 0.4)',
-        'glow': '0 0 20px rgba(59, 130, 246, 0.3)',
-        'glow-lg': '0 0 40px rgba(59, 130, 246, 0.2)',
+        'soft': '0 4px 12px rgba(0, 0, 0, 0.15)',
+        'medium': '0 8px 24px rgba(0, 0, 0, 0.2)',
+        'glow': '0 0 24px rgba(59, 130, 246, 0.15)',
+        'glow-lg': '0 0 48px rgba(59, 130, 246, 0.1)',
+        'inner-soft': 'inset 0 2px 4px rgba(0, 0, 0, 0.1)',
       },
       // 间距
       spacing: {

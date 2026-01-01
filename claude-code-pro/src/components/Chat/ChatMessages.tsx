@@ -17,7 +17,7 @@ function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center px-4">
       {/* Logo 图标 */}
-      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center shadow-glow mb-6">
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center shadow-glow mb-6 hover:shadow-glow-lg transition-all">
         <span className="text-3xl font-bold text-white">C</span>
       </div>
 
@@ -33,19 +33,19 @@ function EmptyState() {
 
       {/* 功能列表 */}
       <div className="grid grid-cols-3 gap-4 max-w-lg">
-        <div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-background-surface border border-border-subtle">
+        <div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-background-surface border border-border shadow-soft hover:shadow-medium hover:border-border-strong transition-all">
           <div className="w-8 h-8 rounded-lg bg-success-faint flex items-center justify-center">
             <span className="text-success text-sm">📁</span>
           </div>
           <span className="text-xs text-text-tertiary">文件操作</span>
         </div>
-        <div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-background-surface border border-border-subtle">
+        <div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-background-surface border border-border shadow-soft hover:shadow-medium hover:border-border-strong transition-all">
           <div className="w-8 h-8 rounded-lg bg-warning-faint flex items-center justify-center">
             <span className="text-warning text-sm">⚡</span>
           </div>
           <span className="text-xs text-text-tertiary">快速编辑</span>
         </div>
-        <div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-background-surface border border-border-subtle">
+        <div className="flex flex-col items-center gap-2 p-4 rounded-xl bg-background-surface border border-border shadow-soft hover:shadow-medium hover:border-border-strong transition-all">
           <div className="w-8 h-8 rounded-lg bg-primary-faint flex items-center justify-center">
             <span className="text-primary text-sm">🔍</span>
           </div>

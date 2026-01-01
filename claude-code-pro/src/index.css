@@ -19,8 +19,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0A0A0B;
-  color: #FAFAFA;
+  background-color: #0F0F11;
+  color: #F8F8F8;
 }
 
 #root {
@@ -30,40 +30,48 @@ body {
   flex-direction: column;
 }
 
-/* 滚动条样式 */
+/* 优化的滚动条样式 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.3);
+  background-clip: content-box;
 }
 
-/* 自定义 prose 样式 */
+::-webkit-scrollbar-corner {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 优化的 prose 样式 */
 .prose {
-  --tw-prose-body: #FAFAFA;
-  --tw-prose-headings: #FAFAFA;
-  --tw-prose-lead: #A1A1AA;
-  --tw-prose-links: #3B82F6;
-  --tw-prose-bold: #FAFAFA;
-  --tw-prose-counters: #71717A;
-  --tw-prose-bullets: #A1A1AA;
-  --tw-prose-hr: rgba(255, 255, 255, 0.1);
-  --tw-prose-quotes: #A1A1AA;
-  --tw-prose-quote-borders: rgba(255, 255, 255, 0.1);
-  --tw-prose-code: #FAFAFA;
-  --tw-prose-pre-code: #A1A1AA;
-  --tw-prose-pre-bg: #1C1C1E;
-  --tw-prose-th-borders: rgba(255, 255, 255, 0.1);
-  --tw-prose-td-borders: rgba(255, 255, 255, 0.1);
+  --tw-prose-body: #F8F8F8;
+  --tw-prose-headings: #F8F8F8;
+  --tw-prose-lead: #B4B4B8;
+  --tw-prose-links: #60A5FA;
+  --tw-prose-bold: #F8F8F8;
+  --tw-prose-counters: #8E8E93;
+  --tw-prose-bullets: #B4B4B8;
+  --tw-prose-hr: rgba(255, 255, 255, 0.15);
+  --tw-prose-quotes: #B4B4B8;
+  --tw-prose-quote-borders: rgba(255, 255, 255, 0.15);
+  --tw-prose-code: #F8F8F8;
+  --tw-prose-pre-code: #B4B4B8;
+  --tw-prose-pre-bg: #25252B;
+  --tw-prose-th-borders: rgba(255, 255, 255, 0.15);
+  --tw-prose-td-borders: rgba(255, 255, 255, 0.15);
 }
