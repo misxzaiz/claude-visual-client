@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Layout, Header, Sidebar, Main, Aside } from './components/Common';
+import { Layout, Header, Sidebar, Main, Aside, StatusIndicator } from './components/Common';
 import { ChatMessages, ChatInput } from './components/Chat';
 import { ToolPanel } from './components/ToolPanel';
 import { useConfigStore, useChatStore } from './stores';
