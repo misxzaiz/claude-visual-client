@@ -158,11 +158,14 @@ impl ChatSession {
 pub async fn start_chat(
     message: String,
     window: Window,
+    state: tauri::State<'_, crate::AppState>,
 ) -> Result<String> {
     eprintln!("[start_chat] 收到消息: {}", message);
 
-    // 获取配置
-    let config = Config::default(); // TODO: 从 AppState 获取配置
+    // 从 AppState 获取实际配置
+    let config_store = state.config_store.lock()
+        .map_err(|e| crate::error::AppError::Unknown(e.to_string()))?;
+    let config = config_store.get().clone();
 
     // 启动 Claude 会话
     let session = ChatSession::start(&config, &message)?;
