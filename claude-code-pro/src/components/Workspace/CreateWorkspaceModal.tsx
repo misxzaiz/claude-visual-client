@@ -39,14 +39,15 @@ export function CreateWorkspaceModal({ onClose }: CreateWorkspaceModalProps) {
 
   const handleSelectFolder = async () => {
     try {
-      // 调用 Tauri 文件选择器
-      const { openDirectoryDialog } = await import('@tauri-apps/plugin-dialog');
-      const selected = await openDirectoryDialog({
-        title: '选择工作区文件夹',
+      // 使用正确的 Tauri 2.0 dialog 插件 API
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      const selected = await open({
+        directory: true,
         multiple: false,
+        title: '选择工作区文件夹',
       });
       
-      if (selected) {
+      if (selected && !Array.isArray(selected)) {
         setPath(selected);
         // 如果名称为空，使用文件夹名称作为默认名称
         if (!name.trim()) {
