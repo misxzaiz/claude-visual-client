@@ -53,6 +53,10 @@ pub enum AppError {
     #[error("Permission denied: {0}")]
     PermissionDenied(String),
 
+    /// 无效路径
+    #[error("Invalid path: {0}")]
+    InvalidPath(String),
+
     /// 超时
     #[error("Operation timed out")]
     Timeout,
@@ -74,6 +78,7 @@ impl AppError {
             AppError::ConfigError(e) => format!("配置错误: {}", e),
             AppError::SessionNotFound(id) => format!("会话不存在: {}", id),
             AppError::PermissionDenied(e) => format!("权限被拒绝: {}", e),
+            AppError::InvalidPath(path) => format!("无效路径: {}", path),
             AppError::Timeout => "操作超时".to_string(),
             AppError::Unknown(e) => format!("未知错误: {}", e),
         }

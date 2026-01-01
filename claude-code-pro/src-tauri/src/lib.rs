@@ -7,6 +7,7 @@ use error::Result;
 use models::config::{Config, HealthStatus};
 use services::config_store::ConfigStore;
 use commands::chat::start_chat;
+use commands::{validate_workspace_path, get_directory_info};
 use std::sync::Mutex;
 
 /// 全局配置状态
@@ -104,6 +105,9 @@ pub fn run() {
             detect_claude,
             // 聊天相关
             start_chat,
+            // 工作区相关
+            validate_workspace_path,
+            get_directory_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

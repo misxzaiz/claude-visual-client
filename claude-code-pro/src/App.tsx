@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { Layout, Header, Sidebar, Main, StatusIndicator } from './components/Common';
+import { Layout, Header, Sidebar, Main, StatusIndicator, WorkspaceSelector } from './components/Common';
 import { ChatMessages, ChatInput } from './components/Chat';
 import { ToolPanel } from './components/ToolPanel';
-import { useConfigStore, useChatStore } from './stores';
+import { useConfigStore, useChatStore, useWorkspaceStore } from './stores';
 import { useChatEvent } from './hooks';
 import './index.css';
 
@@ -17,6 +17,7 @@ function App() {
     handleStreamEvent,
     error
   } = useChatStore();
+  const { getCurrentWorkspace } = useWorkspaceStore();
 
   // 初始化配置
   useEffect(() => {
@@ -27,9 +28,14 @@ function App() {
   // 监听聊天流事件
   useChatEvent(handleStreamEvent);
 
+  const currentWorkspace = getCurrentWorkspace();
+
   return (
     <Layout>
       <Sidebar>
+        {/* 工作区选择器 */}
+        <WorkspaceSelector />
+
         {/* 新建对话按钮 */}
         <div className="p-3">
           <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5
@@ -81,7 +87,7 @@ function App() {
       </Sidebar>
 
       <Main>
-        <Header title="Claude Code">
+        <Header title={currentWorkspace ? `${currentWorkspace.name} - Claude Code Pro` : 'Claude Code Pro'}>
           <StatusIndicator
             status={healthStatus?.claudeAvailable ? 'online' : 'offline'}
             label={healthStatus?.claudeVersion ?? 'Claude 未连接'}

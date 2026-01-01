@@ -61,3 +61,17 @@ export async function continueChat(sessionId: string): Promise<void> {
 export async function interruptChat(sessionId: string): Promise<void> {
   return invoke('interrupt_chat', { sessionId });
 }
+
+// ============================================================================
+// 工作区相关命令
+// ============================================================================
+
+/** 验证工作区路径 */
+export async function validateWorkspacePath(path: string): Promise<boolean> {
+  return invoke('validate_workspace_path', { path });
+}
+
+/** 获取目录信息 */
+export async function getDirectoryInfo(path: string) {
+  return invoke('get_directory_info', { path });
+}

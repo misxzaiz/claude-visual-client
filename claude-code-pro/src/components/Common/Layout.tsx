@@ -47,10 +47,10 @@ export function Header({ title, children }: HeaderProps) {
   );
 }
 
-/** 左侧边栏 - 缩窄到 180px */
+/** 左侧边栏 - 扩展到 220px 以容纳工作区 */
 export function Sidebar({ children, className = '' }: SidebarProps) {
   return (
-    <aside className={`flex flex-col w-[180px] bg-background-elevated border-r border-border shrink-0 ${className}`}>
+    <aside className={`flex flex-col w-[220px] bg-background-elevated border-r border-border shrink-0 ${className}`}>
       {children}
     </aside>
   );

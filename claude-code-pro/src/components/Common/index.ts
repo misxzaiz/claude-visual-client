@@ -6,3 +6,4 @@ export { Layout, Header, Sidebar, Main, Aside } from './Layout';
 export { StatusIndicator } from './StatusIndicator';
 export { Button } from './Button';
 export * from './Icons';
+export * from '../Workspace';
