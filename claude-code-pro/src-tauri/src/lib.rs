@@ -6,7 +6,7 @@ mod commands;
 use error::Result;
 use models::config::{Config, HealthStatus};
 use services::config_store::ConfigStore;
-use commands::chat::{start_chat, continue_chat, interrupt_chat};
+use commands::chat::start_chat;
 use std::sync::Mutex;
 
 /// 全局配置状态
@@ -77,12 +77,6 @@ fn detect_claude(state: tauri::State<AppState>) -> Option<String> {
     store.detect_claude()
 }
 
-/// 保留原始的 greet 命令用于测试
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 // ============================================================================
 // Tauri App Builder
 // ============================================================================
@@ -110,10 +104,6 @@ pub fn run() {
             detect_claude,
             // 聊天相关
             start_chat,
-            continue_chat,
-            interrupt_chat,
-            // 测试
-            greet,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

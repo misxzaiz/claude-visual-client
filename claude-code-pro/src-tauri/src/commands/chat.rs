@@ -6,17 +6,6 @@ use std::process::{Command, Stdio, Child};
 use tauri::{Emitter, Window};
 use uuid::Uuid;
 
-/// 转义命令行参数（处理引号和空格）
-fn escape_command_arg(arg: &str) -> String {
-    if arg.contains(' ') || arg.contains('"') || arg.contains('\\') {
-        // Windows cmd.exe 风格的转义
-        let escaped = arg.replace('\"', "\"\"");
-        format!("\"{}\"", escaped)
-    } else {
-        arg.to_string()
-    }
-}
-
 /// Claude 聊天会话
 pub struct ChatSession {
     pub id: String,
@@ -158,13 +147,6 @@ impl ChatSession {
 
         eprintln!("[ChatSession::read_events] 读取结束，共处理 {} 行", line_count);
     }
-
-    /// 终止会话
-    pub fn terminate(mut self) -> Result<()> {
-        self.child.kill()
-            .map_err(|e| AppError::ProcessError(format!("终止会话失败: {}", e)))?;
-        Ok(())
-    }
 }
 
 // ============================================================================
@@ -204,32 +186,4 @@ pub async fn start_chat(
     });
 
     Ok(session_id)
-}
-
-/// 继续聊天会话
-#[tauri::command]
-pub async fn continue_chat(
-    _session_id: String,
-    window: Window,
-) -> Result<()> {
-    // TODO: 实现继续聊天逻辑
-    // 需要保存会话状态并在后台线程中恢复
-
-    window.emit("chat-event", serde_json::json!({
-        "type": "text_delta",
-        "text": "继续对话功能待实现...\n"
-    }))?;
-
-    Ok(())
-}
-
-/// 中断聊天
-#[tauri::command]
-pub async fn interrupt_chat(
-    _session_id: String,
-) -> Result<()> {
-    // TODO: 实现中断逻辑
-    // 需要终止对应的后台线程和进程
-
-    Ok(())
 }

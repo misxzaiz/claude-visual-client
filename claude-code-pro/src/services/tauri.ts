@@ -43,11 +43,6 @@ export async function healthCheck(): Promise<HealthStatus> {
   return invoke<HealthStatus>('health_check');
 }
 
-/** 检测 Claude CLI */
-export async function detectClaude(): Promise<string | null> {
-  return invoke<string | null>('detect_claude');
-}
-
 // ============================================================================
 // 聊天相关命令
 // ============================================================================
@@ -65,13 +60,4 @@ export async function continueChat(sessionId: string): Promise<void> {
 /** 中断聊天 */
 export async function interruptChat(sessionId: string): Promise<void> {
   return invoke('interrupt_chat', { sessionId });
-}
-
-// ============================================================================
-// 测试命令
-// ============================================================================
-
-/** 测试命令 */
-export async function greet(name: string): Promise<string> {
-  return invoke<string>('greet', { name });
 }

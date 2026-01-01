@@ -2,7 +2,7 @@
  * 聊天相关 Hook
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import type { StreamEvent } from '../types';
 
@@ -26,34 +26,4 @@ export function useChatEvent(
       unlistenPromise.then((unlisten) => unlisten());
     };
   }, [onEvent, onError]);
-}
-
-/** 发送消息 Hook */
-export function useSendMessage() {
-  const sendMessage = useCallback(async (message: string) => {
-    const { startChat } = await import('../services/tauri');
-    return await startChat(message);
-  }, []);
-
-  return { sendMessage };
-}
-
-/** 继续对话 Hook */
-export function useContinueChat() {
-  const continueChat = useCallback(async (sessionId: string) => {
-    const { continueChat: cont } = await import('../services/tauri');
-    return await cont(sessionId);
-  }, []);
-
-  return { continueChat };
-}
-
-/** 中断对话 Hook */
-export function useInterruptChat() {
-  const interruptChat = useCallback(async (sessionId: string) => {
-    const { interruptChat: interrupt } = await import('../services/tauri');
-    return await interrupt(sessionId);
-  }, []);
-
-  return { interruptChat };
 }

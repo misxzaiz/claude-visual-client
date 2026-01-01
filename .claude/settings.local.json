@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(tree:*)",
+      "Bash(cargo:*)",
+      "Bash(dir:*)",
+      "Bash(npm install:*)",
+      "Bash(where:*)",
+      "Bash(mkdir:*)",
+      "Bash(rustup component add:*)",
+      "Bash(rustup show:*)",
+      "Bash(rustup:*)",
+      "Bash(findstr:*)",
+      "Bash(npm run tauri:*)",
+      "Bash(npm run dev)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(npx tailwindcss init:*)",
+      "Bash(npm run build)",
+      "Bash(npx tsc:*)",
+      "Bash(tasklist:*)",
+      "Bash(cmd:*)",
+      "Bash(powershell:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(timeout:*)",
+      "Bash(exit:*)"
+    ]
+  }
+}
