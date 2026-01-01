@@ -123,8 +123,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
         break;
 
-      case 'assistant':
-        // 助手消息 - 提取文本内容
+      case 'assistant': {
+        // 助手消息 - 提取文本内容和工具调用
         const textContent = event.message.content
           .filter((item) => item.type === 'text')
           .map((item) => item.text)
@@ -135,7 +135,58 @@ export const useChatStore = create<ChatState>((set, get) => ({
             currentContent: state.currentContent + textContent
           }));
         }
+
+        // 提取工具调用 (tool_use 类型)
+        const toolUseBlocks = event.message.content.filter(
+          (item) => item.type === 'tool_use'
+        );
+
+        for (const block of toolUseBlocks) {
+          if (block.id && block.name && block.input) {
+            const newToolCall: ToolCall = {
+              id: block.id,
+              name: block.name,
+              status: 'running',
+              input: block.input,
+              startedAt: new Date().toISOString(),
+            };
+            set((state) => ({
+              toolCalls: [...state.toolCalls, newToolCall]
+            }));
+          }
+        }
+
+        // 如果 stop_reason 是 tool_use，说明等待工具执行
+        if (event.message.stop_reason === 'tool_use') {
+          // 继续等待工具结果
+        }
         break;
+      }
+
+      case 'user': {
+        // 用户消息 - 包含工具执行结果 (tool_result 类型)
+        const toolResults = event.message.content.filter(
+          (item) => item.type === 'tool_result'
+        );
+
+        for (const result of toolResults) {
+          if (result.tool_use_id) {
+            set((state) => ({
+              toolCalls: state.toolCalls.map(tc =>
+                tc.id === result.tool_use_id
+                  ? {
+                      ...tc,
+                      status: result.is_error ? 'failed' : 'completed',
+                      output: result.content || '',
+                      completedAt: new Date().toISOString(),
+                    }
+                  : tc
+              )
+            }));
+          }
+        }
+        break;
+      }
 
       case 'session_start':
         set({ conversationId: event.sessionId, isStreaming: true });

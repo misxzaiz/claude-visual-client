@@ -28,6 +28,12 @@ pub enum StreamEvent {
         message: serde_json::Value,
     },
 
+    /// 用户消息（包含工具结果）
+    #[serde(rename = "user")]
+    User {
+        message: serde_json::Value,
+    },
+
     /// 文本内容
     #[serde(rename = "text_delta")]
     TextDelta { text: String },
