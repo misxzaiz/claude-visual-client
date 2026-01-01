@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 /// 应用配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Config {
     /// Claude CLI 命令路径
     pub claude_cmd: String,
@@ -22,8 +23,14 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
+        #[cfg(windows)]
+        let default_cmd = "C:\\Users\\28409\\AppData\\Roaming\\npm\\claude.cmd".to_string();
+
+        #[cfg(not(windows))]
+        let default_cmd = "claude".to_string();
+
         Self {
-            claude_cmd: "claude".to_string(),
+            claude_cmd: default_cmd,
             work_dir: None,
             permission_mode: "default".to_string(),
             session_dir: None,
@@ -34,6 +41,7 @@ impl Default for Config {
 
 /// 健康状态
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HealthStatus {
     /// Claude CLI 是否可用
     pub claude_available: bool,

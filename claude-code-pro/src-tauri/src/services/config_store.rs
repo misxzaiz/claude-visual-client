@@ -17,13 +17,104 @@ impl ConfigStore {
             .ok_or_else(|| AppError::ConfigError("无法获取配置目录".to_string()))?
             .join("claude-code-pro");
 
+        eprintln!("配置目录: {:?}", config_dir);
+
         // 确保配置目录存在
         std::fs::create_dir_all(&config_dir)?;
+        eprintln!("配置目录已创建");
 
         let config_path = config_dir.join("config.json");
-        let config = Self::load_from_file(&config_path)?;
+        eprintln!("配置文件路径: {:?}", config_path);
+
+        let mut config = Self::load_from_file(&config_path)?;
+        eprintln!("当前 claude_cmd: {}", config.claude_cmd);
+
+        // 如果 claude_cmd 是默认值，尝试解析完整路径
+        if config.claude_cmd == "claude" {
+            eprintln!("尝试解析 Claude 路径...");
+            if let Some(full_path) = Self::resolve_claude_path() {
+                config.claude_cmd = full_path.clone();
+                eprintln!("找到 Claude 路径: {}", full_path);
+                // 立即保存配置
+                if let Err(e) = Self::save_config_to_path(&config, &config_path) {
+                    eprintln!("保存配置失败: {}", e);
+                } else {
+                    eprintln!("Claude 路径已解析并保存: {}", full_path);
+                }
+            } else {
+                eprintln!("无法解析 Claude 路径");
+            }
+        }
 
         Ok(Self { config, config_path })
+    }
+
+    /// 查找 claude 命令的完整路径
+    fn resolve_claude_path() -> Option<String> {
+        #[cfg(windows)]
+        {
+            // Windows 上先尝试 PowerShell 的 Get-Command
+            let ps_output = Command::new("powershell")
+                .args(["-Command", "Get-Command claude -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source"])
+                .output()
+                .ok();
+
+            if let Some(output) = ps_output {
+                if output.status.success() {
+                    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    // PowerShell 可能返回 .ps1 文件，我们需要 .cmd 文件
+                    if path.ends_with(".ps1") {
+                        let cmd_path = path.replace(".ps1", ".cmd");
+                        if std::path::Path::new(&cmd_path).exists() {
+                            return Some(cmd_path);
+                        }
+                    }
+                    if !path.is_empty() && std::path::Path::new(&path).exists() {
+                        return Some(path);
+                    }
+                }
+            }
+
+            // 后备：使用 where 命令
+            let output = Command::new("cmd")
+                .args(["/C", "where", "claude"])
+                .output()
+                .ok()?;
+
+            if output.status.success() {
+                String::from_utf8_lossy(&output.stdout)
+                    .lines()
+                    .next()
+                    .map(|s| s.trim().to_string())
+            } else {
+                None
+            }
+        }
+
+        #[cfg(not(windows))]
+        {
+            // Unix 上使用 which 命令
+            let output = Command::new("sh")
+                .args(["-c", "which claude"])
+                .output()
+                .ok()?;
+
+            if output.status.success() {
+                String::from_utf8_lossy(&output.stdout)
+                    .lines()
+                    .next()
+                    .map(|s| s.trim().to_string())
+            } else {
+                None
+            }
+        }
+    }
+
+    /// 保存配置到指定路径
+    fn save_config_to_path(config: &Config, path: &Path) -> Result<()> {
+        let content = serde_json::to_string_pretty(config)?;
+        std::fs::write(path, content)?;
+        Ok(())
     }
 
     /// 从文件加载配置
@@ -75,22 +166,34 @@ impl ConfigStore {
 
     /// 检测 Claude CLI 是否可用
     pub fn detect_claude(&self) -> Option<String> {
+        eprintln!("[detect_claude] 尝试执行: {} --version", self.config.claude_cmd);
+
         let output = Command::new(&self.config.claude_cmd)
             .arg("--version")
             .output();
 
         match output {
             Ok(output) => {
+                eprintln!("[detect_claude] 进程退出码: {:?}", output.status.code());
+                eprintln!("[detect_claude] stdout: {}", String::from_utf8_lossy(&output.stdout));
+                eprintln!("[detect_claude] stderr: {}", String::from_utf8_lossy(&output.stderr));
+
                 if output.status.success() {
-                    String::from_utf8_lossy(&output.stdout)
+                    let version = String::from_utf8_lossy(&output.stdout)
                         .lines()
                         .next()
-                        .map(|s| s.to_string())
+                        .map(|s| s.to_string());
+                    eprintln!("[detect_claude] 解析成功: {:?}", version);
+                    version
                 } else {
+                    eprintln!("[detect_claude] 命令执行失败");
                     None
                 }
             }
-            Err(_) => None,
+            Err(e) => {
+                eprintln!("[detect_claude] 启动进程失败: {:?}", e);
+                None
+            }
         }
     }
 
