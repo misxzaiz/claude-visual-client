@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { Layout, Header, Sidebar, Main, StatusIndicator } from './components/Common';
+import { Layout, Header, Sidebar, Main, Aside } from './components/Common';
 import { ChatMessages, ChatInput } from './components/Chat';
+import { ToolPanel } from './components/ToolPanel';
 import { useConfigStore, useChatStore } from './stores';
 import { useChatEvent } from './hooks';
 import './index.css';
@@ -83,6 +84,9 @@ function App() {
           isStreaming={isStreaming}
         />
       </Main>
+
+      {/* 工具面板 */}
+      <ToolPanel />
     </Layout>
   );
 }

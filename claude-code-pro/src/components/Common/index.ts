@@ -2,7 +2,7 @@
  * 通用组件导出
  */
 
-export { Layout, Header, Sidebar, Main } from './Layout';
+export { Layout, Header, Sidebar, Main, Aside } from './Layout';
 export { StatusIndicator } from './StatusIndicator';
 export { Button } from './Button';
 export * from './Icons';
