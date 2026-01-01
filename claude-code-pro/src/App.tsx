@@ -20,6 +20,7 @@ function App() {
   } = useChatStore();
   const { getCurrentWorkspace } = useWorkspaceStore();
   const [showSettings, setShowSettings] = useState(false);
+  const [showNewConversationConfirm, setShowNewConversationConfirm] = useState(false);
 
   // 初始化配置
   useEffect(() => {
@@ -34,7 +35,24 @@ function App() {
 
   // 新对话处理
   const handleNewConversation = () => {
+    if (messages.length > 0) {
+      // 如果有对话内容，显示确认对话框
+      setShowNewConversationConfirm(true);
+    } else {
+      // 如果没有对话内容，直接清空
+      clearMessages();
+    }
+  };
+
+  // 确认新对话
+  const confirmNewConversation = () => {
     clearMessages();
+    setShowNewConversationConfirm(false);
+  };
+
+  // 取消新对话
+  const cancelNewConversation = () => {
+    setShowNewConversationConfirm(false);
   };
 
   return (
@@ -116,6 +134,34 @@ function App() {
       {/* 设置模态框 */}
       {showSettings && (
         <SettingsModal onClose={() => setShowSettings(false)} />
+      )}
+
+      {/* 新对话确认对话框 */}
+      {showNewConversationConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              开始新对话
+            </h3>
+            <p className="text-gray-600 mb-6">
+              确定要开始新对话吗？当前的对话历史将被清空。
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelNewConversation}
+                className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmNewConversation}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+              >
+                确定
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   );
