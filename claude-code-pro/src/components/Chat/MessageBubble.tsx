@@ -16,8 +16,8 @@ function formatContent(content: string) {
   // 代码块
   content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
     const language = lang || '';
-    const langLabel = lang ? `<span class="text-xs text-text-subtle select-none float-right mt-1 ml-2">${lang}</span>` : '';
-    return `<div class="relative my-3"><div class="flex items-center justify-between bg-background-elevation px-3 py-1.5 rounded-t-lg border-b border-border-subtle"><span class="text-xs text-text-subtle">代码</span>${langLabel}</div><pre class="bg-background-secondary p-3 rounded-b-lg overflow-x-auto"><code class="text-sm text-text">${code.trim()}</code></pre></div>`;
+    const langLabel = lang ? `<span class="text-xs text-text-tertiary select-none float-right mt-1 ml-2">${lang}</span>` : '';
+    return `<div class="relative my-3"><div class="flex items-center justify-between bg-background-surface px-3 py-1.5 rounded-t-lg border-b border-border-subtle"><span class="text-xs text-text-tertiary">代码</span>${langLabel}</div><pre class="bg-background-elevated p-3 rounded-b-lg overflow-x-auto"><code class="text-sm text-text-secondary">${code.trim()}</code></pre></div>`;
   });
 
   // 行内代码
@@ -38,29 +38,27 @@ function formatContent(content: string) {
 /** 工具摘要标签 */
 function ToolSummary({ summary, onClick }: { summary: NonNullable<Message['toolSummary']>; onClick: () => void }) {
   return (
-    <div className="flex items-center gap-2 mt-2 px-4 pb-2">
-      <div className="flex items-center gap-1.5 text-xs text-text-subtle">
-        <span>使用</span>
-        <span className="flex gap-1">
-          {summary.names.slice(0, 3).map((name) => (
-            <span
-              key={name}
-              className="px-1.5 py-0.5 bg-background-elevation rounded text-text-muted font-mono"
-            >
-              {name}
-            </span>
-          ))}
-          {summary.names.length > 3 && (
-            <span className="text-text-subtle">+{summary.names.length - 3}</span>
-          )}
+    <div className="flex items-center gap-2 mt-2">
+      {summary.names.slice(0, 4).map((name) => (
+        <span
+          key={name}
+          className="inline-flex items-center gap-1.5 px-2 py-1
+                   bg-background-surface border border-border-subtle
+                   rounded-lg text-xs text-text-tertiary
+                   font-mono"
+        >
+          <span className="w-1 h-1 rounded-full bg-success" />
+          {name}
         </span>
-        <span>共 {summary.count} 个工具</span>
-      </div>
+      ))}
+      {summary.names.length > 4 && (
+        <span className="text-xs text-text-muted">+{summary.names.length - 4}</span>
+      )}
       <button
         onClick={onClick}
-        className="flex items-center gap-1 text-xs text-primary hover:text-primary-hover transition-colors"
+        className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary-hover transition-colors"
       >
-        查看详情
+        查看
         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
@@ -74,60 +72,66 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
   const isSystem = message.role === 'system';
   const { isOpen: toolPanelOpen, setOpen: setToolPanelOpen } = useToolPanelStore();
 
-  // 流式传输时，从工具面板获取当前工具列表
-  const toolPanelStore = useToolPanelStore();
-  const streamingTools = isStreaming ? toolPanelStore.tools : undefined;
-
   const handleToolClick = () => {
     if (!toolPanelOpen) {
       setToolPanelOpen(true);
     }
   };
 
-  return (
-    <div
-      className={clsx(
-        'flex w-full mb-5 animate-in fade-in slide-in-from-bottom-2 duration-300',
-        isUser ? 'justify-end' : 'justify-start',
-        isSystem && 'justify-center'
-      )}
-    >
-      <div
-        className={clsx(
-          'max-w-[85%] rounded-2xl shadow-soft',
-          isUser
-            ? 'bg-gradient-to-br from-primary to-primary-hover text-white rounded-br-md'
-            : 'bg-background-tertiary text-text border border-border-subtle rounded-bl-md',
-          isSystem && 'bg-transparent text-text-subtle text-sm italic border-none shadow-none'
-        )}
-      >
-        {/* 消息头部 */}
-        {!isUser && !isSystem && (
-          <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center">
-              <span className="text-xs font-bold text-white">C</span>
-            </div>
-            <span className="text-xs font-medium text-text-subtle">Claude</span>
-            {message.timestamp && (
-              <span className="text-xs text-text-subtle ml-auto">
-                {new Date(message.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
+  // 用户消息 - 右对齐，渐变背景
+  if (isUser) {
+    return (
+      <div className="flex justify-end mb-6">
+        <div className="max-w-[85%] px-4 py-3 rounded-2xl
+                    bg-gradient-to-br from-primary to-primary-600
+                    text-white shadow-glow">
+          <div className="text-sm leading-relaxed whitespace-pre-wrap">
+            {message.content}
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
+
+  // 系统消息
+  if (isSystem) {
+    return (
+      <div className="flex justify-center mb-6">
+        <p className="text-sm text-text-muted italic">{message.content}</p>
+      </div>
+    );
+  }
+
+  // Claude 消息 - 左侧布局，头像 + 内容
+  return (
+    <div className="flex gap-3 mb-6">
+      {/* Avatar */}
+      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-600
+                      flex items-center justify-center shadow-glow shrink-0">
+        <span className="text-sm font-bold text-white">C</span>
+      </div>
+
+      {/* 内容 */}
+      <div className="flex-1 space-y-1">
+        {/* 头部信息 */}
+        <div className="flex items-baseline gap-2">
+          <span className="text-sm font-medium text-text-primary">Claude</span>
+          {message.timestamp && (
+            <span className="text-xs text-text-tertiary">
+              {new Date(message.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+        </div>
 
         {/* 消息内容 */}
         <div
-          className={clsx(
-            'px-4 pb-3 prose prose-invert prose-sm max-w-none',
-            isUser ? 'py-3 text-white' : ''
-          )}
+          className="prose prose-invert prose-sm max-w-none"
           dangerouslySetInnerHTML={{ __html: formatContent(message.content) }}
         />
 
         {/* 流式光标 */}
-        {isStreaming && !isUser && (
-          <span className="inline-flex ml-4 mb-3">
+        {isStreaming && (
+          <span className="inline-flex ml-1">
             <span className="flex gap-0.5 items-end h-4">
               <span className="w-1 h-1 bg-text-muted rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
               <span className="w-1 h-1 bg-text-muted rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -136,8 +140,8 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
           </span>
         )}
 
-        {/* 工具摘要标签（替代内嵌时间线） */}
-        {!isUser && !isSystem && message.toolSummary && !isStreaming && (
+        {/* 工具摘要标签 */}
+        {!isStreaming && message.toolSummary && (
           <ToolSummary summary={message.toolSummary} onClick={handleToolClick} />
         )}
       </div>

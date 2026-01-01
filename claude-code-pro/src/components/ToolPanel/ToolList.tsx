@@ -43,7 +43,7 @@ function getStatusColor(status: ToolCall['status']): string {
     case 'completed':
       return 'text-success';
     case 'failed':
-      return 'text-error';
+      return 'text-danger';
   }
 }
 
@@ -61,18 +61,18 @@ function ToolItem({ tool, isSelected, onClick }: ToolItemProps) {
     <button
       onClick={onClick}
       className={clsx(
-        'w-full flex items-center gap-2 px-3 py-2 text-left transition-colors',
+        'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors',
         'hover:bg-background-hover',
-        isSelected && 'bg-background-tertiary border-l-2 border-primary'
+        isSelected && 'bg-background-surface border-l-2 border-primary'
       )}
     >
       <StatusIcon size={14} className={clsx('shrink-0', getStatusColor(tool.status))} />
-      <span className="flex-1 font-mono text-sm truncate text-text">
+      <span className="flex-1 font-mono text-sm truncate text-text-primary">
         {tool.name}
       </span>
       <span className={clsx(
         'text-xs tabular-nums',
-        tool.status === 'running' ? 'text-warning' : 'text-text-subtle'
+        tool.status === 'running' ? 'text-warning' : 'text-text-tertiary'
       )}>
         {getDuration(tool)}
       </span>
@@ -103,13 +103,13 @@ export function ToolList() {
   if (tools.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center px-4">
-        <div className="w-12 h-12 rounded-full bg-background-tertiary flex items-center justify-center mb-3">
-          <svg className="w-6 h-6 text-text-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <div className="w-12 h-12 rounded-full bg-background-surface flex items-center justify-center mb-3">
+          <svg className="w-6 h-6 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </div>
-        <p className="text-sm text-text-subtle">暂无工具调用</p>
+        <p className="text-sm text-text-tertiary">暂无工具调用</p>
         <p className="text-xs text-text-muted mt-1">工具调用将在此显示</p>
       </div>
     );

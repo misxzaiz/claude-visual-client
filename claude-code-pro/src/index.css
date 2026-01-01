@@ -7,20 +7,25 @@
   color-scheme: dark;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
+  padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0d1117;
-  color: #c9d1d9;
+  background-color: #0A0A0B;
+  color: #FAFAFA;
 }
 
 #root {
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
@@ -32,14 +37,33 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #161b22;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #30363d;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #484f58;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 自定义 prose 样式 */
+.prose {
+  --tw-prose-body: #FAFAFA;
+  --tw-prose-headings: #FAFAFA;
+  --tw-prose-lead: #A1A1AA;
+  --tw-prose-links: #3B82F6;
+  --tw-prose-bold: #FAFAFA;
+  --tw-prose-counters: #71717A;
+  --tw-prose-bullets: #A1A1AA;
+  --tw-prose-hr: rgba(255, 255, 255, 0.1);
+  --tw-prose-quotes: #A1A1AA;
+  --tw-prose-quote-borders: rgba(255, 255, 255, 0.1);
+  --tw-prose-code: #FAFAFA;
+  --tw-prose-pre-code: #A1A1AA;
+  --tw-prose-pre-bg: #1C1C1E;
+  --tw-prose-th-borders: rgba(255, 255, 255, 0.1);
+  --tw-prose-td-borders: rgba(255, 255, 255, 0.1);
 }

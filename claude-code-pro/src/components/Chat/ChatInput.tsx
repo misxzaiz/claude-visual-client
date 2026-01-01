@@ -53,16 +53,16 @@ export function ChatInput({
   };
 
   return (
-    <div className="border-t border-border p-4 bg-background-secondary">
+    <div className="border-t border-border p-4 bg-background-elevated">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-end gap-3 bg-background-tertiary border border-border-subtle rounded-xl p-2 focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-shadow">
+        <div className="flex items-end gap-3 bg-background-surface border border-border-subtle rounded-2xl p-3 focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-shadow shadow-soft">
           <textarea
             ref={textareaRef}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
-            className="flex-1 px-3 py-2 bg-transparent text-text placeholder:text-text-subtle resize-none outline-none text-sm leading-relaxed"
+            className="flex-1 px-2 py-1.5 bg-transparent text-text-primary placeholder:text-text-tertiary resize-none outline-none text-sm leading-relaxed"
             rows={1}
             disabled={disabled}
             style={{ minHeight: '40px', maxHeight: '200px' }}
@@ -73,7 +73,7 @@ export function ChatInput({
               variant="danger"
               size="sm"
               onClick={onInterrupt}
-              className="shrink-0 h-9 px-3"
+              className="shrink-0 h-9 px-4"
             >
               <IconStop size={14} className="mr-1" />
               中断
@@ -83,7 +83,7 @@ export function ChatInput({
               onClick={handleSend}
               disabled={disabled || isStreaming || !value.trim()}
               size="sm"
-              className="shrink-0 h-9 px-3"
+              className="shrink-0 h-9 px-4 shadow-glow"
             >
               <IconSend size={14} className="mr-1" />
               发送
@@ -93,7 +93,7 @@ export function ChatInput({
 
         {/* 状态提示 */}
         <div className="flex items-center justify-between mt-2 px-1">
-          <div className="text-xs text-text-subtle">
+          <div className="text-xs text-text-tertiary">
             {isStreaming ? (
               <span className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" />
@@ -103,7 +103,7 @@ export function ChatInput({
               <span>按 Enter 发送，Shift+Enter 换行</span>
             )}
           </div>
-          <div className="text-xs text-text-subtle">
+          <div className="text-xs text-text-tertiary">
             {value.length > 0 && `${value.length} 字符`}
           </div>
         </div>

@@ -70,7 +70,7 @@ function getStatusInfo(status: ToolCall['status']) {
     pending: 'text-text-muted',
     running: 'text-warning',
     completed: 'text-success',
-    failed: 'text-error',
+    failed: 'text-danger',
   }[status];
 
   return { StatusIcon, statusText, statusColor };
@@ -93,16 +93,16 @@ export function ToolDetail({ toolId, onBack }: ToolDetailProps) {
   return (
     <div className="h-full flex flex-col">
       {/* 头部 */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-background-tertiary">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-subtle bg-background-surface">
         <button
           onClick={onBack}
-          className="p-1 -ml-1 text-text-subtle hover:text-text transition-colors rounded hover:bg-background-hover"
+          className="p-1.5 -ml-1.5 text-text-tertiary hover:text-text-primary transition-colors rounded-lg hover:bg-background-hover"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <span className="font-mono text-sm font-medium text-text">{tool.name}</span>
+        <span className="font-mono text-sm font-medium text-text-primary">{tool.name}</span>
         <div className={clsx('flex items-center gap-1.5 ml-auto', statusColor)}>
           <StatusIcon size={14} />
           <span className="text-xs">{statusText}</span>
@@ -113,24 +113,24 @@ export function ToolDetail({ toolId, onBack }: ToolDetailProps) {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* 状态信息 */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-background-tertiary rounded-lg p-3">
-            <div className="text-xs text-text-subtle mb-1">状态</div>
+          <div className="bg-background-surface rounded-xl p-3 border border-border-subtle">
+            <div className="text-xs text-text-tertiary mb-1">状态</div>
             <div className={clsx('text-sm font-medium', statusColor)}>{statusText}</div>
           </div>
-          <div className="bg-background-tertiary rounded-lg p-3">
-            <div className="text-xs text-text-subtle mb-1">耗时</div>
-            <div className="text-sm font-medium text-text tabular-nums">
+          <div className="bg-background-surface rounded-xl p-3 border border-border-subtle">
+            <div className="text-xs text-text-tertiary mb-1">耗时</div>
+            <div className="text-sm font-medium text-text-primary tabular-nums">
               {formatDuration(tool.startedAt, tool.completedAt)}
             </div>
           </div>
-          <div className="bg-background-tertiary rounded-lg p-3">
-            <div className="text-xs text-text-subtle mb-1">开始时间</div>
-            <div className="text-sm text-text-muted tabular-nums">{formatTime(tool.startedAt)}</div>
+          <div className="bg-background-surface rounded-xl p-3 border border-border-subtle">
+            <div className="text-xs text-text-tertiary mb-1">开始时间</div>
+            <div className="text-sm text-text-secondary tabular-nums">{formatTime(tool.startedAt)}</div>
           </div>
           {tool.completedAt && (
-            <div className="bg-background-tertiary rounded-lg p-3">
-              <div className="text-xs text-text-subtle mb-1">结束时间</div>
-              <div className="text-sm text-text-muted tabular-nums">{formatTime(tool.completedAt)}</div>
+            <div className="bg-background-surface rounded-xl p-3 border border-border-subtle">
+              <div className="text-xs text-text-tertiary mb-1">结束时间</div>
+              <div className="text-sm text-text-secondary tabular-nums">{formatTime(tool.completedAt)}</div>
             </div>
           )}
         </div>
@@ -139,16 +139,16 @@ export function ToolDetail({ toolId, onBack }: ToolDetailProps) {
         {tool.input && Object.keys(tool.input).length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-text">输入参数</span>
+              <span className="text-sm font-medium text-text-primary">输入参数</span>
               <button
                 onClick={() => copyToClipboard(JSON.stringify(tool.input, null, 2))}
-                className="flex items-center gap-1 text-xs text-text-subtle hover:text-text transition-colors"
+                className="flex items-center gap-1 text-xs text-text-tertiary hover:text-text-primary transition-colors"
               >
                 <IconCopy size={12} />
                 复制
               </button>
             </div>
-            <pre className="text-sm bg-background-secondary p-3 rounded-lg border border-border-subtle overflow-x-auto">
+            <pre className="text-sm bg-background-surface p-3 rounded-xl border border-border-subtle overflow-x-auto text-text-secondary">
               {JSON.stringify(tool.input, null, 2)}
             </pre>
           </div>
@@ -158,22 +158,22 @@ export function ToolDetail({ toolId, onBack }: ToolDetailProps) {
         {tool.output && (
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-text">
+              <span className="text-sm font-medium text-text-primary">
                 {tool.status === 'failed' ? '错误信息' : '输出结果'}
               </span>
               <button
                 onClick={() => copyToClipboard(tool.output || '')}
-                className="flex items-center gap-1 text-xs text-text-subtle hover:text-text transition-colors"
+                className="flex items-center gap-1 text-xs text-text-tertiary hover:text-text-primary transition-colors"
               >
                 <IconCopy size={12} />
                 复制
               </button>
             </div>
             <pre className={clsx(
-              'text-sm p-3 rounded-lg border border-border-subtle overflow-x-auto max-h-64 overflow-y-auto',
+              'text-sm p-3 rounded-xl border overflow-x-auto max-h-64 overflow-y-auto',
               tool.status === 'failed'
-                ? 'bg-danger-faint text-error border-danger/30'
-                : 'bg-background-secondary text-text-muted'
+                ? 'bg-danger-faint text-danger border-danger/30'
+                : 'bg-background-surface text-text-secondary border-border-subtle'
             )}>
               {tool.output}
             </pre>
@@ -183,7 +183,7 @@ export function ToolDetail({ toolId, onBack }: ToolDetailProps) {
         {/* 空状态提示 */}
         {!tool.input && !tool.output && (
           <div className="text-center py-8">
-            <p className="text-text-subtle text-sm">暂无详细信息</p>
+            <p className="text-text-tertiary text-sm">暂无详细信息</p>
           </div>
         )}
       </div>

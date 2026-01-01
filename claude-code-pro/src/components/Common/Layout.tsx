@@ -31,7 +31,7 @@ interface AsideProps {
 /** 主布局容器 */
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background">
+    <div className="flex h-screen w-screen overflow-hidden bg-background-base">
       {children}
     </div>
   );
@@ -40,17 +40,17 @@ export function Layout({ children }: LayoutProps) {
 /** 头部 */
 export function Header({ title, children }: HeaderProps) {
   return (
-    <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background-secondary shrink-0">
-      <h1 className="text-lg font-semibold">{title}</h1>
+    <header className="flex items-center justify-between px-5 h-14 bg-background-elevated border-b border-border shrink-0">
+      <h1 className="text-base font-semibold text-text-primary">{title}</h1>
       {children && <div className="flex items-center gap-2">{children}</div>}
     </header>
   );
 }
 
-/** 左侧边栏 */
+/** 左侧边栏 - 缩窄到 180px */
 export function Sidebar({ children, className = '' }: SidebarProps) {
   return (
-    <aside className={`flex flex-col w-64 border-r border-border bg-background-secondary shrink-0 ${className}`}>
+    <aside className={`flex flex-col w-[180px] bg-background-elevated border-r border-border shrink-0 ${className}`}>
       {children}
     </aside>
   );
@@ -59,7 +59,7 @@ export function Sidebar({ children, className = '' }: SidebarProps) {
 /** 主内容区 */
 export function Main({ children, className = '' }: MainProps) {
   return (
-    <main className={`flex-1 flex flex-col overflow-hidden ${className}`}>
+    <main className={`flex-1 flex flex-col overflow-hidden bg-background-base ${className}`}>
       {children}
     </main>
   );
@@ -68,7 +68,7 @@ export function Main({ children, className = '' }: MainProps) {
 /** 右侧面板 */
 export function Aside({ children, className = '' }: AsideProps) {
   return (
-    <aside className={`flex flex-col shrink-0 ${className}`}>
+    <aside className={`flex flex-col w-[280px] bg-background-elevated border-l border-border shrink-0 ${className}`}>
       {children}
     </aside>
   );

@@ -19,7 +19,7 @@ export function StatusIndicator({
   const sizeClass = size === 'sm' ? 'w-2 h-2' : 'w-3 h-3';
 
   const statusColors = {
-    online: 'bg-success',
+    online: 'bg-success shadow-glow',
     offline: 'bg-text-muted',
     loading: 'bg-warning animate-pulse',
     error: 'bg-danger',
@@ -32,7 +32,7 @@ export function StatusIndicator({
         aria-hidden="true"
       />
       {label && (
-        <span className="text-sm text-text-muted">{label}</span>
+        <span className="text-sm text-text-secondary">{label}</span>
       )}
     </div>
   );
