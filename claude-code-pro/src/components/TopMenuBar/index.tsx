@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react';
-import { useWorkspaceStore } from '../../stores';
+import { useWorkspaceStore, useViewStore } from '../../stores';
 import { useChatStore } from '../../stores';
 
 interface TopMenuBarProps {
@@ -15,6 +15,7 @@ interface TopMenuBarProps {
 export function TopMenuBar({ onNewConversation, onSettings, onCreateWorkspace }: TopMenuBarProps) {
   const { getCurrentWorkspace } = useWorkspaceStore();
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
+  const [showViewMenu, setShowViewMenu] = useState(false);
   const [showNewChatConfirm, setShowNewChatConfirm] = useState(false);
   const { clearMessages, messages } = useChatStore();
 
@@ -43,7 +44,6 @@ export function TopMenuBar({ onNewConversation, onSettings, onCreateWorkspace }:
         <div className="w-6 h-6 rounded bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center shadow-glow">
           <span className="text-xs font-bold text-white">C</span>
         </div>
-        <span className="text-sm font-medium text-text-primary">Claude Code Pro</span>
       </div>
 
       {/* 右侧：工作区 | 新对话 | 设置 */}
@@ -76,6 +76,33 @@ export function TopMenuBar({ onNewConversation, onSettings, onCreateWorkspace }:
                   onClose={() => setShowWorkspaceMenu(false)}
                   onCreateWorkspace={onCreateWorkspace}
                 />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* 分隔线 */}
+        <div className="w-px h-4 bg-border-subtle" />
+
+        {/* View 菜单 */}
+        <div className="relative">
+          <button
+            onClick={() => setShowViewMenu(!showViewMenu)}
+            className="px-2.5 py-1 rounded-md text-xs text-text-secondary
+                     hover:text-text-primary hover:bg-background-hover transition-colors"
+          >
+            View
+          </button>
+
+          {/* View 下拉菜单 */}
+          {showViewMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setShowViewMenu(false)}
+              />
+              <div className="absolute right-0 top-full mt-1 w-40 bg-background-surface border border-border rounded-lg shadow-xl z-20 overflow-hidden">
+                <ViewMenuContent onClose={() => setShowViewMenu(false)} />
               </div>
             </>
           )}
@@ -199,6 +226,86 @@ function WorkspaceMenuContent({ onClose, onCreateWorkspace }: { onClose: () => v
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
           创建工作区
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** View 菜单内容 */
+function ViewMenuContent({ onClose }: { onClose: () => void }) {
+  const { showSidebar, showEditor, showToolPanel, toggleSidebar, toggleEditor, toggleToolPanel, setAIOnlyMode, resetView } = useViewStore();
+
+  const handleToggle = (action: () => void) => {
+    action();
+    onClose();
+  };
+
+  return (
+    <div className="py-1">
+      <button
+        onClick={() => handleToggle(toggleSidebar)}
+        className="w-full flex items-center justify-between gap-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-background-hover transition-colors"
+      >
+        <span>文件浏览器</span>
+        <div className={`w-4 h-4 rounded border ${showSidebar ? 'bg-primary border-primary' : 'border-border'} flex items-center justify-center`}>
+          {showSidebar && (
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </div>
+      </button>
+
+      <button
+        onClick={() => handleToggle(toggleEditor)}
+        className="w-full flex items-center justify-between gap-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-background-hover transition-colors"
+      >
+        <span>编辑器</span>
+        <div className={`w-4 h-4 rounded border ${showEditor ? 'bg-primary border-primary' : 'border-border'} flex items-center justify-center`}>
+          {showEditor && (
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </div>
+      </button>
+
+      <button
+        onClick={() => handleToggle(toggleToolPanel)}
+        className="w-full flex items-center justify-between gap-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-background-hover transition-colors"
+      >
+        <span>工具面板</span>
+        <div className={`w-4 h-4 rounded border ${showToolPanel ? 'bg-primary border-primary' : 'border-border'} flex items-center justify-center`}>
+          {showToolPanel && (
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </div>
+      </button>
+
+      <div className="border-t border-border-subtle mt-1 pt-1">
+        <button
+          onClick={() => handleToggle(setAIOnlyMode)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-background-hover transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          仅 AI 对话
+        </button>
+      </div>
+
+      <div className="border-t border-border-subtle mt-1 pt-1">
+        <button
+          onClick={() => handleToggle(resetView)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-background-hover transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          重置视图
         </button>
       </div>
     </div>

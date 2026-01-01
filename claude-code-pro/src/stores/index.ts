@@ -8,3 +8,4 @@ export { useToolPanelStore, updateToolByName, updateToolByToolUseId } from './to
 export { useWorkspaceStore } from './workspaceStore';
 export { useFileExplorerStore } from './fileExplorerStore';
 export { useFileEditorStore } from './fileEditorStore';
+export { useViewStore } from './viewStore';

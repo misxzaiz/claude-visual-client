@@ -5,7 +5,7 @@ import { ToolPanel } from './components/ToolPanel';
 import { EditorPanel } from './components/Editor';
 import { TopMenuBar as TopMenuBarComponent } from './components/TopMenuBar';
 import { CreateWorkspaceModal } from './components/Workspace';
-import { useConfigStore, useChatStore } from './stores';
+import { useConfigStore, useChatStore, useViewStore } from './stores';
 import { useChatEvent } from './hooks';
 import './index.css';
 
@@ -22,6 +22,7 @@ function App() {
   } = useChatStore();
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
+  const { showSidebar, showEditor, showToolPanel } = useViewStore();
 
   // 初始化配置
   useEffect(() => {
@@ -45,18 +46,23 @@ function App() {
 
       {/* 主体内容区域：Sidebar | Main | ToolPanel */}
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar>
-          <FileExplorer />
-        </Sidebar>
+        {/* 条件渲染 Sidebar */}
+        {showSidebar && (
+          <Sidebar>
+            <FileExplorer />
+          </Sidebar>
+        )}
 
         <Main className="flex-row">
-          {/* 左侧：编辑器 */}
-          <div className="w-1/2 min-w-[300px] border-r border-border flex flex-col">
-            <EditorPanel />
-          </div>
+          {/* 条件渲染 Editor */}
+          {showEditor && (
+            <div className="w-1/2 min-w-[300px] border-r border-border flex flex-col">
+              <EditorPanel />
+            </div>
+          )}
 
-          {/* 右侧：聊天区域 */}
-          <div className="flex-1 flex flex-col min-w-[300px]">
+          {/* 聊天区域：宽度根据 Editor 是否显示调整 */}
+          <div className={showEditor ? "flex-1 flex flex-col min-w-[300px]" : "flex-1 flex flex-col"}>
             {/* 状态指示器 */}
             <div className="flex items-center justify-between px-4 py-2 bg-background-elevated border-b border-border-subtle">
               <span className="text-sm text-text-primary">AI 对话</span>
@@ -87,8 +93,8 @@ function App() {
           </div>
         </Main>
 
-        {/* 工具面板 */}
-        <ToolPanel />
+        {/* 条件渲染 ToolPanel */}
+        {showToolPanel && <ToolPanel />}
       </div>
 
       {/* 设置模态框 */}
