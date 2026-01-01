@@ -1,6 +1,14 @@
 use serde::{Deserialize, Serialize};
-use super::chat::PermissionDenial;
 use std::collections::HashMap;
+
+/// 权限拒绝详情
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermissionDenial {
+    pub tool_name: String,
+    pub reason: String,
+    #[serde(flatten)]
+    pub extra: HashMap<String, serde_json::Value>,
+}
 
 /// 流事件类型 - 对应 Claude CLI stream-json 输出
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,8 +76,3 @@ impl StreamEvent {
         serde_json::from_str(line).ok()
     }
 }
-
-/// Tauri 事件名称
-pub const EVENT_CHAT: &str = "chat-event";
-pub const EVENT_PERMISSION: &str = "permission-request";
-pub const EVENT_ERROR: &str = "error-event";
