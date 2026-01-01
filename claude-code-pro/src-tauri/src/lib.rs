@@ -6,7 +6,7 @@ mod commands;
 use error::Result;
 use models::config::{Config, HealthStatus};
 use services::config_store::ConfigStore;
-use commands::chat::start_chat;
+use commands::chat::{start_chat, continue_chat};
 use commands::{validate_workspace_path, get_directory_info};
 use commands::file_explorer::{
     read_directory, get_file_content, create_file, create_directory, 
@@ -109,6 +109,7 @@ pub fn run() {
             detect_claude,
             // 聊天相关
             start_chat,
+            continue_chat,
             // 工作区相关
             validate_workspace_path,
             get_directory_info,

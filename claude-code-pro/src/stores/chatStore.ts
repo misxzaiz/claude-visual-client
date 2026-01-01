@@ -132,6 +132,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         // 系统事件，保存会话 ID
         if (event.session_id) {
           set({ conversationId: event.session_id, isStreaming: true });
+          console.log('[handleStreamEvent] 设置真实会话ID:', event.session_id);
         }
         break;
 
@@ -193,6 +194,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       case 'session_start':
         set({ conversationId: event.sessionId, isStreaming: true });
+        console.log('[handleStreamEvent] session_start 设置会话ID:', event.sessionId);
         // 清空之前的工具调用
         toolPanelStore.clearTools();
         break;
@@ -258,6 +260,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   sendMessage: async (content: string) => {
+    const { conversationId } = get();
+    
     // 添加用户消息
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -274,8 +278,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     useToolPanelStore.getState().clearTools();
 
     try {
-      const sessionId = await tauri.startChat(content);
-      set({ conversationId: sessionId });
+      if (conversationId) {
+        // 继续现有会话
+        await tauri.continueChat(conversationId, content);
+        console.log('[sendMessage] 继续会话:', conversationId);
+      } else {
+        // 创建新会话 - 不设置会话ID，等待system事件返回真实ID
+        await tauri.startChat(content);
+        console.log('[sendMessage] 创建新会话，等待system事件返回真实session_id');
+      }
     } catch (e) {
       set({
         error: e instanceof Error ? e.message : '发送消息失败',

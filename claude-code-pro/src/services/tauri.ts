@@ -53,8 +53,8 @@ export async function startChat(message: string): Promise<string> {
 }
 
 /** 继续聊天会话 */
-export async function continueChat(sessionId: string): Promise<void> {
-  return invoke('continue_chat', { sessionId });
+export async function continueChat(sessionId: string, message: string): Promise<void> {
+  return invoke('continue_chat', { sessionId, message });
 }
 
 /** 中断聊天 */

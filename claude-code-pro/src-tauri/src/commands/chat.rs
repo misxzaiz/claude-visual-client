@@ -13,6 +13,13 @@ pub struct ChatSession {
 }
 
 impl ChatSession {
+    /// 创建ChatSession实例（用于continue_chat）
+    pub fn with_id_and_child(id: String, child: Child) -> Self {
+        Self { id, child }
+    }
+}
+
+impl ChatSession {
     /// 启动新的聊天会话
     pub fn start(config: &Config, message: &str) -> Result<Self> {
         eprintln!("[ChatSession::start] 启动 Claude 会话");
@@ -189,4 +196,94 @@ pub async fn start_chat(
     });
 
     Ok(session_id)
+}
+
+/// 继续聊天会话
+#[tauri::command]
+pub async fn continue_chat(
+    session_id: String,
+    message: String,
+    window: Window,
+    state: tauri::State<'_, crate::AppState>,
+) -> Result<()> {
+    eprintln!("[continue_chat] 继续会话: {}", session_id);
+    eprintln!("[continue_chat] 消息: {}", message);
+
+    // 从 AppState 获取实际配置
+    let config_store = state.config_store.lock()
+        .map_err(|e| crate::error::AppError::Unknown(e.to_string()))?;
+    let config = config_store.get().clone();
+
+    // 使用 Claude CLI 原生的 --resume 参数恢复会话
+    eprintln!("[continue_chat] 使用 --resume 参数恢复会话");
+
+    // 在 Windows 上，.cmd 文件需要通过 cmd.exe 执行
+    #[cfg(windows)]
+    let mut cmd = Command::new("cmd");
+    #[cfg(windows)]
+    cmd.args([
+        "/c",
+        &config.claude_cmd,
+        "--resume",            // ✅ 使用真正的会话恢复
+        &session_id,          // ✅ 传递会话ID
+        "--print",
+        "--verbose",
+        "--output-format", "stream-json",
+        "--permission-mode", &config.permission_mode,
+        &message,
+    ]);
+
+    #[cfg(not(windows))]
+    let mut cmd = Command::new(&config.claude_cmd);
+    #[cfg(not(windows))]
+    cmd.args([
+        "--resume",            // ✅ 使用真正的会话恢复
+        &session_id,          // ✅ 传递会话ID
+        "--print",
+        "--verbose",
+        "--output-format", "stream-json",
+        "--permission-mode", &config.permission_mode,
+        &message,
+    ]);
+
+    cmd.stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    // 设置工作目录
+    if let Some(ref work_dir) = config.work_dir {
+        eprintln!("[continue_chat] work_dir: {:?}", work_dir);
+        cmd.current_dir(work_dir);
+    }
+
+    // 设置 Git Bash 环境变量 (Windows 需要)
+    if let Some(ref git_bash_path) = config.git_bin_path {
+        eprintln!("[continue_chat] 设置 CLAUDE_CODE_GIT_BASH_PATH: {}", git_bash_path);
+        cmd.env("CLAUDE_CODE_GIT_BASH_PATH", git_bash_path);
+    }
+
+    eprintln!("[continue_chat] 执行命令: {:?}", cmd);
+
+    let child = cmd.spawn()
+        .map_err(|e| AppError::ProcessError(format!("继续 Claude 会话失败: {}", e)))?;
+
+    eprintln!("[continue_chat] 进程 PID: {:?}", child.id());
+
+    let session = ChatSession::with_id_and_child(session_id.clone(), child);
+
+    let window_clone = window.clone();
+
+    // 在后台线程中读取输出
+    std::thread::spawn(move || {
+        eprintln!("[continue_chat] 后台线程开始");
+        session.read_events(move |event| {
+            // 发送事件到前端
+            let event_json = serde_json::to_string(&event)
+                .unwrap_or_else(|_| "{}".to_string());
+            eprintln!("[continue_chat] 发送事件: {}", event_json);
+            let _ = window_clone.emit("chat-event", event_json);
+        });
+        eprintln!("[continue_chat] 后台线程结束");
+    });
+
+    Ok(())
 }

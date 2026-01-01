@@ -3,6 +3,7 @@ pub mod workspace;
 pub mod file_explorer;
 
 // 重新导出命令函数，确保它们在模块级别可见
+pub use chat::{start_chat, continue_chat};
 pub use workspace::validate_workspace_path;
 pub use workspace::get_directory_info;
 pub use file_explorer::{
