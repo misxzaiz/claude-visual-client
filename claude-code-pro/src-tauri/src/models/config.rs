@@ -29,18 +29,12 @@ impl Default for Config {
         #[cfg(not(windows))]
         let default_cmd = "claude".to_string();
 
-        #[cfg(windows)]
-        let default_git_bash = Some("D:\\Program Files\\Git\\usr\\bin\\bash.exe".to_string());
-
-        #[cfg(not(windows))]
-        let default_git_bash = None;
-
         Self {
             claude_cmd: default_cmd,
             work_dir: None,
             permission_mode: "bypassPermissions".to_string(),
             session_dir: None,
-            git_bin_path: default_git_bash,
+            git_bin_path: None,
         }
     }
 }
