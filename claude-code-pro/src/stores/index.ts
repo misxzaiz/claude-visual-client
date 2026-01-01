@@ -6,3 +6,4 @@ export { useConfigStore } from './configStore';
 export { useChatStore } from './chatStore';
 export { useToolPanelStore, updateToolByName, updateToolByToolUseId } from './toolPanelStore';
 export { useWorkspaceStore } from './workspaceStore';
+export { useFileExplorerStore } from './fileExplorerStore';

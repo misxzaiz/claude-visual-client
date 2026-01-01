@@ -8,6 +8,10 @@ use models::config::{Config, HealthStatus};
 use services::config_store::ConfigStore;
 use commands::chat::start_chat;
 use commands::{validate_workspace_path, get_directory_info};
+use commands::file_explorer::{
+    read_directory, get_file_content, create_file, create_directory, 
+    delete_file, rename_file, path_exists
+};
 use std::sync::Mutex;
 
 /// 全局配置状态
@@ -108,6 +112,14 @@ pub fn run() {
             // 工作区相关
             validate_workspace_path,
             get_directory_info,
+            // 文件浏览器相关
+            read_directory,
+            get_file_content,
+            create_file,
+            create_directory,
+            delete_file,
+            rename_file,
+            path_exists,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

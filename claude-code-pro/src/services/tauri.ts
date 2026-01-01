@@ -75,3 +75,42 @@ export async function validateWorkspacePath(path: string): Promise<boolean> {
 export async function getDirectoryInfo(path: string) {
   return invoke('get_directory_info', { path });
 }
+
+// ============================================================================
+// 文件浏览器相关命令
+// ============================================================================
+
+/** 读取目录内容 */
+export async function readDirectory(path: string) {
+  return invoke('read_directory', { path });
+}
+
+/** 获取文件内容 */
+export async function getFileContent(path: string) {
+  return invoke('get_file_content', { path });
+}
+
+/** 创建文件 */
+export async function createFile(path: string, content?: string) {
+  return invoke('create_file', { path, content });
+}
+
+/** 创建目录 */
+export async function createDirectory(path: string) {
+  return invoke('create_directory', { path });
+}
+
+/** 删除文件或目录 */
+export async function deleteFile(path: string) {
+  return invoke('delete_file', { path });
+}
+
+/** 重命名文件或目录 */
+export async function renameFile(oldPath: string, newName: string) {
+  return invoke('rename_file', { oldPath, newName });
+}
+
+/** 检查路径是否存在 */
+export async function pathExists(path: string) {
+  return invoke('path_exists', { path });
+}

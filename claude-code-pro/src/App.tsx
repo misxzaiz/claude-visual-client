@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Layout, Header, Sidebar, Main, StatusIndicator, WorkspaceSelector, SettingsModal } from './components/Common';
+import { Layout, Header, Sidebar, Main, StatusIndicator, WorkspaceSelector, SettingsModal, FileExplorer } from './components/Common';
 import { ChatMessages, ChatInput } from './components/Chat';
 import { ToolPanel } from './components/ToolPanel';
 import { useConfigStore, useChatStore, useWorkspaceStore } from './stores';
@@ -50,28 +50,10 @@ function App() {
           </button>
         </div>
 
-        {/* 会话列表 */}
-        <nav className="flex-1 overflow-y-auto px-2 py-1">
-          {messages.length === 0 ? (
-            <div className="space-y-4">
-              <div className="px-3 py-1">
-                <div className="text-xs font-medium text-text-tertiary">今天</div>
-              </div>
-              <div className="text-sm text-text-muted px-3 py-2">
-                暂无对话历史
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="px-3 py-1">
-                <div className="text-xs font-medium text-text-tertiary">当前</div>
-              </div>
-              <div className="text-sm text-text-muted px-3 py-2">
-                对话进行中
-              </div>
-            </div>
-          )}
-        </nav>
+        {/* 文件浏览器 */}
+        <div className="flex-1 border-t border-border">
+          <FileExplorer />
+        </div>
 
         {/* 底部设置 */}
         <div className="p-3 border-t border-border">

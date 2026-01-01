@@ -8,3 +8,4 @@ export { Button } from './Button';
 export * from './Icons';
 export * from '../Workspace';
 export * from '../Settings';
+export * from '../FileExplorer';
