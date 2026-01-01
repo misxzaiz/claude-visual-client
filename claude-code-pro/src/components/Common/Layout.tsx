@@ -59,7 +59,7 @@ export function Sidebar({ children, className = '' }: SidebarProps) {
 /** 主内容区 */
 export function Main({ children, className = '' }: MainProps) {
   return (
-    <main className={`flex-1 flex flex-col overflow-hidden bg-background-base ${className}`}>
+    <main className={`flex-1 flex overflow-hidden bg-background-base ${className}`}>
       {children}
     </main>
   );
