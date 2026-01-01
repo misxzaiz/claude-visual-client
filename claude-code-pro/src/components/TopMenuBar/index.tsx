@@ -15,13 +15,25 @@ interface TopMenuBarProps {
 export function TopMenuBar({ onNewConversation, onSettings, onCreateWorkspace }: TopMenuBarProps) {
   const { getCurrentWorkspace } = useWorkspaceStore();
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
-  const { clearMessages } = useChatStore();
+  const [showNewChatConfirm, setShowNewChatConfirm] = useState(false);
+  const { clearMessages, messages } = useChatStore();
 
   const currentWorkspace = getCurrentWorkspace();
 
   const handleNewConversation = () => {
+    // 如果有消息，显示确认对话框
+    if (messages.length > 0) {
+      setShowNewChatConfirm(true);
+    } else {
+      clearMessages();
+      onNewConversation();
+    }
+  };
+
+  const confirmNewChat = () => {
     clearMessages();
     onNewConversation();
+    setShowNewChatConfirm(false);
   };
 
   return (
@@ -95,6 +107,38 @@ export function TopMenuBar({ onNewConversation, onSettings, onCreateWorkspace }:
           </svg>
         </button>
       </div>
+
+      {/* 新对话确认对话框 */}
+      {showNewChatConfirm && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 z-50"
+            onClick={() => setShowNewChatConfirm(false)}
+          />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-80 bg-background-elevated rounded-xl border border-border shadow-xl p-5">
+            <h3 className="text-base font-semibold text-text-primary mb-2">
+              确认新对话
+            </h3>
+            <p className="text-sm text-text-secondary mb-5">
+              当前对话有 {messages.length} 条消息，确定要开始新对话吗？
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowNewChatConfirm(false)}
+                className="px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-background-hover rounded-lg transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmNewChat}
+                className="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+              >
+                确认
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
