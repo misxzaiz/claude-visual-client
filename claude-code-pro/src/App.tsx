@@ -15,7 +15,8 @@ function App() {
     sendMessage,
     interruptChat,
     handleStreamEvent,
-    error
+    error,
+    clearMessages
   } = useChatStore();
   const { getCurrentWorkspace } = useWorkspaceStore();
   const [showSettings, setShowSettings] = useState(false);
@@ -31,6 +32,11 @@ function App() {
 
   const currentWorkspace = getCurrentWorkspace();
 
+  // 新对话处理
+  const handleNewConversation = () => {
+    clearMessages();
+  };
+
   return (
     <Layout>
       <Sidebar>
@@ -39,7 +45,9 @@ function App() {
 
         {/* 新建对话按钮 */}
         <div className="p-3">
-          <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5
+          <button 
+            onClick={handleNewConversation}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5
                            bg-primary text-white rounded-xl font-medium text-sm
                            hover:bg-primary-hover transition-colors
                            shadow-glow">
