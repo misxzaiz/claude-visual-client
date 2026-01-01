@@ -6,82 +6,161 @@ use std::process::{Command, Stdio, Child};
 use tauri::{Emitter, Window};
 use uuid::Uuid;
 
+/// 转义命令行参数（处理引号和空格）
+fn escape_command_arg(arg: &str) -> String {
+    if arg.contains(' ') || arg.contains('"') || arg.contains('\\') {
+        // Windows cmd.exe 风格的转义
+        let escaped = arg.replace('\"', "\"\"");
+        format!("\"{}\"", escaped)
+    } else {
+        arg.to_string()
+    }
+}
+
 /// Claude 聊天会话
 pub struct ChatSession {
     pub id: String,
     pub child: Child,
-    pub stdin: std::process::ChildStdin,
 }
 
 impl ChatSession {
     /// 启动新的聊天会话
     pub fn start(config: &Config, message: &str) -> Result<Self> {
+        eprintln!("[ChatSession::start] 启动 Claude 会话");
+        eprintln!("[ChatSession::start] claude_cmd: {}", config.claude_cmd);
+        eprintln!("[ChatSession::start] message: {}", message);
+        eprintln!("[ChatSession::start] permission_mode: {}", config.permission_mode);
+
+        // 在 Windows 上，.cmd 文件需要通过 cmd.exe 执行
+        // 参数必须分别传递，不能合并为一个字符串
+        #[cfg(windows)]
+        let mut cmd = Command::new("cmd");
+        #[cfg(windows)]
+        cmd.args([
+            "/c",
+            &config.claude_cmd,
+            "--print",
+            "--verbose",
+            "--output-format",
+            "stream-json",
+            "--permission-mode",
+            &config.permission_mode,
+            message,
+        ]);
+
+        #[cfg(not(windows))]
         let mut cmd = Command::new(&config.claude_cmd);
-        cmd.args(["chat", "--json"])
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
+        #[cfg(not(windows))]
+        cmd.args([
+            "--print",
+            "--verbose",
+            "--output-format",
+            "stream-json",
+            "--permission-mode",
+            &config.permission_mode,
+            message,
+        ]);
+
+        cmd.stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
         // 设置工作目录
         if let Some(ref work_dir) = config.work_dir {
+            eprintln!("[ChatSession::start] work_dir: {:?}", work_dir);
             cmd.current_dir(work_dir);
         }
 
-        let mut child = cmd.spawn()
-            .map_err(|e| AppError::ProcessError(format!("启动 Claude 失败: {}", e)))?;
-
-        // 写入用户消息
-        if let Some(ref mut stdin) = child.stdin {
-            use std::io::Write;
-            writeln!(stdin, "{}", message)
-                .map_err(|e| AppError::ProcessError(format!("写入消息失败: {}", e)))?;
+        // 设置 Git Bash 环境变量 (Windows 需要)
+        if let Some(ref git_bash_path) = config.git_bin_path {
+            eprintln!("[ChatSession::start] 设置 CLAUDE_CODE_GIT_BASH_PATH: {}", git_bash_path);
+            cmd.env("CLAUDE_CODE_GIT_BASH_PATH", git_bash_path);
         }
 
-        let stdin = child.stdin.take()
-            .ok_or_else(|| AppError::ProcessError("无法获取 stdin".to_string()))?;
+        eprintln!("[ChatSession::start] 执行命令: {:?}", cmd);
+
+        let child = cmd.spawn()
+            .map_err(|e| AppError::ProcessError(format!("启动 Claude 失败: {}", e)))?;
+
+        eprintln!("[ChatSession::start] 进程 PID: {:?}", child.id());
 
         Ok(Self {
             id: Uuid::new_v4().to_string(),
             child,
-            stdin,
         })
     }
 
-    /// 发送更多输入
-    pub fn send_input(&mut self, input: &str) -> Result<()> {
-        use std::io::Write;
-        writeln!(self.stdin, "{}", input)
-            .map_err(|e| AppError::ProcessError(format!("发送输入失败: {}", e)))?;
-        Ok(())
-    }
-
     /// 读取输出并解析事件
-    pub fn read_events<F>(&mut self, mut callback: F)
+    pub fn read_events<F>(self, mut callback: F)
     where
-        F: FnMut(StreamEvent),
+        F: FnMut(StreamEvent) + Send + 'static,
     {
-        if let Some(stdout) = self.child.stdout.take() {
-            let reader = BufReader::new(stdout);
+        eprintln!("[ChatSession::read_events] 开始读取输出");
+
+        let stdout = self.child.stdout
+            .ok_or_else(|| AppError::ProcessError("无法获取 stdout".to_string()));
+
+        if stdout.is_err() {
+            return;
+        }
+
+        let stderr = self.child.stderr
+            .ok_or_else(|| AppError::ProcessError("无法获取 stderr".to_string()));
+
+        if stderr.is_err() {
+            return;
+        }
+
+        let stdout = stdout.unwrap();
+        let stderr = stderr.unwrap();
+
+        // 启动单独的线程读取 stderr
+        std::thread::spawn(move || {
+            eprintln!("[stderr_reader] 开始读取 stderr");
+            let reader = BufReader::new(stderr);
             for line in reader.lines() {
-                let line = match line {
-                    Ok(l) => l,
+                match line {
+                    Ok(l) => eprintln!("[stderr] {}", l),
                     Err(_) => break,
-                };
-
-                if line.trim().is_empty() {
-                    continue;
-                }
-
-                // 使用 StreamEvent::parse_line 解析
-                if let Some(event) = StreamEvent::parse_line(&line) {
-                    callback(event);
                 }
             }
+            eprintln!("[stderr_reader] stderr 结束");
+        });
+
+        let reader = BufReader::new(stdout);
+        let mut line_count = 0;
+
+        for line in reader.lines() {
+            let line = match line {
+                Ok(l) => l,
+                Err(e) => {
+                    eprintln!("[ChatSession::read_events] 读取行错误: {}", e);
+                    break;
+                }
+            };
+
+            line_count += 1;
+            let line_trimmed = line.trim();
+
+            if line_trimmed.is_empty() {
+                continue;
+            }
+
+            eprintln!("[ChatSession::read_events] 行 {}: {}", line_count, line_trimmed.chars().take(100).collect::<String>());
+
+            // 使用 StreamEvent::parse_line 解析
+            if let Some(event) = StreamEvent::parse_line(line_trimmed) {
+                eprintln!("[ChatSession::read_events] 解析成功事件: {:?}", std::mem::discriminant(&event));
+                callback(event);
+            } else {
+                eprintln!("[ChatSession::read_events] 解析失败，原始内容: {}", line_trimmed.chars().take(200).collect::<String>());
+            }
         }
+
+        eprintln!("[ChatSession::read_events] 读取结束，共处理 {} 行", line_count);
     }
 
     /// 终止会话
-    pub fn terminate(&mut self) -> Result<()> {
+    pub fn terminate(mut self) -> Result<()> {
         self.child.kill()
             .map_err(|e| AppError::ProcessError(format!("终止会话失败: {}", e)))?;
         Ok(())
@@ -98,23 +177,30 @@ pub async fn start_chat(
     message: String,
     window: Window,
 ) -> Result<String> {
+    eprintln!("[start_chat] 收到消息: {}", message);
+
     // 获取配置
     let config = Config::default(); // TODO: 从 AppState 获取配置
 
     // 启动 Claude 会话
-    let mut session = ChatSession::start(&config, &message)?;
+    let session = ChatSession::start(&config, &message)?;
 
     let session_id = session.id.clone();
     let window_clone = window.clone();
 
+    eprintln!("[start_chat] 会话 ID: {}", session_id);
+
     // 在后台线程中读取输出
     std::thread::spawn(move || {
-        session.read_events(|event| {
-            // 发送事件到前端
-            let event_json = serde_json::to_value(&event)
-                .unwrap_or(serde_json::Value::Null);
+        eprintln!("[start_chat] 后台线程开始");
+        session.read_events(move |event| {
+            // 发送事件到前端 - 直接序列化为 JSON 字符串
+            let event_json = serde_json::to_string(&event)
+                .unwrap_or_else(|_| "{}".to_string());
+            eprintln!("[start_chat] 发送事件: {}", event_json);
             let _ = window_clone.emit("chat-event", event_json);
         });
+        eprintln!("[start_chat] 后台线程结束");
     });
 
     Ok(session_id)

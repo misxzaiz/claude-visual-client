@@ -111,6 +111,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const state = get();
 
     switch (event.type) {
+      case 'system':
+        // 系统事件，保存会话 ID
+        if (event.session_id) {
+          set({ conversationId: event.session_id, isStreaming: true });
+        }
+        break;
+
+      case 'assistant':
+        // 助手消息 - 提取文本内容
+        const textContent = event.message.content
+          .filter((item) => item.type === 'text')
+          .map((item) => item.text)
+          .join('');
+
+        if (textContent) {
+          set((state) => ({
+            currentContent: state.currentContent + textContent
+          }));
+        }
+        break;
+
       case 'session_start':
         set({ conversationId: event.sessionId, isStreaming: true });
         break;
@@ -121,7 +142,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }));
         break;
 
+      case 'result':
       case 'session_end':
+        // 会话结束，完成消息
         state.finishMessage();
         set({ isStreaming: false });
         break;
