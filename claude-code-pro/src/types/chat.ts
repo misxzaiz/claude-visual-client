@@ -25,7 +25,11 @@ export interface Message {
   role: MessageRole;
   content: string;
   timestamp: string;
-  toolCalls?: ToolCall[];
+  /** 工具调用摘要（替代完整的 toolCalls） */
+  toolSummary?: {
+    count: number;
+    names: string[];
+  };
 }
 
 /** 权限拒绝详情 */

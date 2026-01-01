@@ -3,8 +3,9 @@
  */
 
 import { create } from 'zustand';
-import type { Message, PermissionRequest, StreamEvent, ToolCall } from '../types';
+import type { Message, PermissionRequest, StreamEvent } from '../types';
 import * as tauri from '../services/tauri';
+import { useToolPanelStore, updateToolByToolUseId } from './toolPanelStore';
 
 interface ChatState {
   /** 消息列表 */
@@ -19,8 +20,6 @@ interface ChatState {
   pendingPermission: PermissionRequest | null;
   /** 错误 */
   error: string | null;
-  /** 当前会话的工具调用列表 */
-  toolCalls: ToolCall[];
 
   /** 添加消息 */
   addMessage: (message: Message) => void;
@@ -56,7 +55,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   currentContent: '',
   pendingPermission: null,
   error: null,
-  toolCalls: [],
 
   addMessage: (message) => {
     set((state) => ({
@@ -70,6 +68,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       currentContent: '',
       conversationId: null
     });
+    // 同时清空工具面板
+    useToolPanelStore.getState().clearTools();
   },
 
   setConversationId: (id) => {
@@ -87,20 +87,31 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   finishMessage: () => {
-    const { currentContent, messages, toolCalls } = get();
+    const { currentContent, messages } = get();
+    const toolPanelStore = useToolPanelStore.getState();
+
     if (currentContent) {
+      // 从工具面板获取工具摘要
+      const tools = toolPanelStore.tools;
+      const toolSummary = tools.length > 0 ? {
+        count: tools.length,
+        names: Array.from(new Set(tools.map(t => t.name)))
+      } : undefined;
+
       const newMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: currentContent,
         timestamp: new Date().toISOString(),
-        toolCalls: toolCalls.length > 0 ? [...toolCalls] : undefined,
+        toolSummary,
       };
       set({
         messages: [...messages, newMessage],
-        currentContent: '',
-        toolCalls: []
+        currentContent: ''
       });
+
+      // 清空工具面板（为下次对话准备）
+      // 注意：这里保留工具用于查看，不清空
     }
   },
 
@@ -114,6 +125,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   handleStreamEvent: (event) => {
     const state = get();
+    const toolPanelStore = useToolPanelStore.getState();
 
     switch (event.type) {
       case 'system':
@@ -136,23 +148,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
           }));
         }
 
-        // 提取工具调用 (tool_use 类型)
+        // 提取工具调用 (tool_use 类型) 并发送到工具面板
         const toolUseBlocks = event.message.content.filter(
           (item) => item.type === 'tool_use'
         );
 
         for (const block of toolUseBlocks) {
           if (block.id && block.name && block.input) {
-            const newToolCall: ToolCall = {
+            toolPanelStore.addTool({
               id: block.id,
               name: block.name,
               status: 'running',
               input: block.input,
               startedAt: new Date().toISOString(),
-            };
-            set((state) => ({
-              toolCalls: [...state.toolCalls, newToolCall]
-            }));
+            });
           }
         }
 
@@ -171,18 +180,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         for (const result of toolResults) {
           if (result.tool_use_id) {
-            set((state) => ({
-              toolCalls: state.toolCalls.map(tc =>
-                tc.id === result.tool_use_id
-                  ? {
-                      ...tc,
-                      status: result.is_error ? 'failed' : 'completed',
-                      output: result.content || '',
-                      completedAt: new Date().toISOString(),
-                    }
-                  : tc
-              )
-            }));
+            // 更新工具面板中的工具状态
+            toolPanelStore.updateTool(result.tool_use_id, {
+              status: result.is_error ? 'failed' : 'completed',
+              output: result.content || '',
+              completedAt: new Date().toISOString(),
+            });
           }
         }
         break;
@@ -190,6 +193,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       case 'session_start':
         set({ conversationId: event.sessionId, isStreaming: true });
+        // 清空之前的工具调用
+        toolPanelStore.clearTools();
         break;
 
       case 'text_delta':
@@ -224,27 +229,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
         break;
 
       case 'tool_start': {
-        const newToolCall: ToolCall = {
-          id: crypto.randomUUID(),
+        // 兼容旧格式事件
+        const toolId = crypto.randomUUID();
+        toolPanelStore.addTool({
+          id: toolId,
           name: event.toolName,
           status: 'running',
           input: event.input,
           startedAt: new Date().toISOString(),
-        };
-        set((state) => ({
-          toolCalls: [...state.toolCalls, newToolCall]
-        }));
+        });
         break;
       }
 
       case 'tool_end': {
-        set((state) => ({
-          toolCalls: state.toolCalls.map(tc =>
-            tc.name === event.toolName && tc.status === 'running'
-              ? { ...tc, status: 'completed', output: event.output, completedAt: new Date().toISOString() }
-              : tc
-          )
-        }));
+        // 兼容旧格式事件 - 通过名称查找并更新
+        const tools = toolPanelStore.tools;
+        const runningTool = tools.find(t => t.name === event.toolName && t.status === 'running');
+        if (runningTool) {
+          toolPanelStore.updateTool(runningTool.id, {
+            status: 'completed',
+            output: event.output,
+            completedAt: new Date().toISOString(),
+          });
+        }
         break;
       }
     }
@@ -260,8 +267,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     };
     get().addMessage(userMessage);
 
-    // 清空当前内容和工具调用，开始流式传输
-    set({ currentContent: '', isStreaming: true, error: null, toolCalls: [] });
+    // 清空当前内容，开始流式传输
+    set({ currentContent: '', isStreaming: true, error: null });
+
+    // 清空工具面板
+    useToolPanelStore.getState().clearTools();
 
     try {
       const sessionId = await tauri.startChat(content);

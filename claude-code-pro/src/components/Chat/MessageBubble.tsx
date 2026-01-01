@@ -4,13 +4,11 @@
 
 import { type Message } from '../../types';
 import { clsx } from 'clsx';
-import { ToolCallTimeline } from './ToolCallTimeline';
+import { useToolPanelStore } from '../../stores';
 
 interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
-  /** 当前活动的工具调用（流式传输时） */
-  activeToolCalls?: Message['toolCalls'];
 }
 
 /** 格式化消息内容（简单的 Markdown 处理） */
@@ -37,12 +35,54 @@ function formatContent(content: string) {
   return content;
 }
 
-export function MessageBubble({ message, isStreaming, activeToolCalls }: MessageBubbleProps) {
+/** 工具摘要标签 */
+function ToolSummary({ summary, onClick }: { summary: NonNullable<Message['toolSummary']>; onClick: () => void }) {
+  return (
+    <div className="flex items-center gap-2 mt-2 px-4 pb-2">
+      <div className="flex items-center gap-1.5 text-xs text-text-subtle">
+        <span>使用</span>
+        <span className="flex gap-1">
+          {summary.names.slice(0, 3).map((name) => (
+            <span
+              key={name}
+              className="px-1.5 py-0.5 bg-background-elevation rounded text-text-muted font-mono"
+            >
+              {name}
+            </span>
+          ))}
+          {summary.names.length > 3 && (
+            <span className="text-text-subtle">+{summary.names.length - 3}</span>
+          )}
+        </span>
+        <span>共 {summary.count} 个工具</span>
+      </div>
+      <button
+        onClick={onClick}
+        className="flex items-center gap-1 text-xs text-primary hover:text-primary-hover transition-colors"
+      >
+        查看详情
+        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
+  const { isOpen: toolPanelOpen, setOpen: setToolPanelOpen } = useToolPanelStore();
 
-  // 显示的工具调用：流式时用 activeToolCalls，否则用 message.toolCalls
-  const toolCallsToShow = isStreaming ? activeToolCalls : message.toolCalls;
+  // 流式传输时，从工具面板获取当前工具列表
+  const toolPanelStore = useToolPanelStore();
+  const streamingTools = isStreaming ? toolPanelStore.tools : undefined;
+
+  const handleToolClick = () => {
+    if (!toolPanelOpen) {
+      setToolPanelOpen(true);
+    }
+  };
 
   return (
     <div
@@ -96,11 +136,9 @@ export function MessageBubble({ message, isStreaming, activeToolCalls }: Message
           </span>
         )}
 
-        {/* 工具调用时间线 */}
-        {!isUser && !isSystem && toolCallsToShow && toolCallsToShow.length > 0 && (
-          <div className="px-4 pb-3">
-            <ToolCallTimeline toolCalls={toolCallsToShow} />
-          </div>
+        {/* 工具摘要标签（替代内嵌时间线） */}
+        {!isUser && !isSystem && message.toolSummary && !isStreaming && (
+          <ToolSummary summary={message.toolSummary} onClick={handleToolClick} />
         )}
       </div>
     </div>
