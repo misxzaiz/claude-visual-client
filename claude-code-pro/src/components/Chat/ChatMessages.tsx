@@ -2,7 +2,7 @@
  * 聊天消息列表组件
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import type { Message } from '../../types';
 import { MessageBubble } from './MessageBubble';
 
@@ -13,7 +13,7 @@ interface ChatMessagesProps {
 }
 
 /** 空状态组件 */
-function EmptyState() {
+const EmptyState = memo(function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center px-4">
       {/* Logo 图标 */}
@@ -59,7 +59,7 @@ function EmptyState() {
       </p>
     </div>
   );
-}
+});
 
 export function ChatMessages({
   messages,
@@ -68,21 +68,78 @@ export function ChatMessages({
 }: ChatMessagesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
+  const prevContentLengthRef = useRef(0);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 自动滚动到底部（仅在有新消息时）
-  useEffect(() => {
-    if (messages.length !== prevMessagesLengthRef.current || currentContent) {
-      if (scrollRef.current) {
-        requestAnimationFrame(() => {
-          scrollRef.current?.scrollTo({
-            top: scrollRef.current?.scrollHeight,
-            behavior: 'smooth'
-          });
+  // 智能滚动：只在内容实际增长时滚动，并添加节流
+  const scrollToBottom = useCallback((smooth = true) => {
+    if (scrollRef.current) {
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({
+          top: scrollRef.current?.scrollHeight,
+          behavior: smooth ? 'smooth' : 'auto'
         });
-      }
-      prevMessagesLengthRef.current = messages.length;
+      });
     }
-  }, [messages.length, currentContent]);
+  }, []);
+
+  useEffect(() => {
+    const contentLength = currentContent.length;
+    const hasNewMessage = messages.length !== prevMessagesLengthRef.current;
+    const hasContentGrowth = contentLength > prevContentLengthRef.current;
+
+    // 只在有新消息或内容增长时滚动
+    if (hasNewMessage || (isStreaming && hasContentGrowth)) {
+      // 清除之前的定时器（节流）
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+
+      // 流式更新时使用即时滚动（减少延迟感），完成后使用平滑滚动
+      if (isStreaming && currentContent) {
+        scrollToBottom(false); // 即时滚动，避免动画堆积
+      } else {
+        // 节流：限制滚动频率
+        scrollTimeoutRef.current = setTimeout(() => {
+          scrollToBottom(true);
+        }, 100);
+      }
+
+      prevMessagesLengthRef.current = messages.length;
+      prevContentLengthRef.current = contentLength;
+    }
+
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [messages.length, currentContent, isStreaming, scrollToBottom]);
+
+  // 缓存消息列表渲染，避免不必要的重新创建
+  const messageElements = useMemo(() => {
+    return messages.map((message) => (
+      <MessageBubble key={message.id} message={message} />
+    ));
+  }, [messages]);
+
+  // 缓存当前流式消息元素
+  const currentMessageElement = useMemo(() => {
+    if (!currentContent) return null;
+    return (
+      <MessageBubble
+        message={{
+          id: 'current',
+          role: 'assistant',
+          content: currentContent,
+          timestamp: new Date().toISOString(),
+        }}
+        isStreaming={isStreaming}
+      />
+    );
+  }, [currentContent, isStreaming]);
+
+  const isEmpty = messages.length === 0 && !currentContent;
 
   return (
     <div
@@ -90,24 +147,12 @@ export function ChatMessages({
       className="flex-1 overflow-y-auto p-4"
     >
       <div className="max-w-3xl mx-auto h-full">
-        {messages.length === 0 && !currentContent ? (
+        {isEmpty ? (
           <EmptyState />
         ) : (
           <>
-            {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
-            ))}
-            {currentContent && (
-              <MessageBubble
-                message={{
-                  id: 'current',
-                  role: 'assistant',
-                  content: currentContent,
-                  timestamp: new Date().toISOString(),
-                }}
-                isStreaming={isStreaming}
-              />
-            )}
+            {messageElements}
+            {currentMessageElement}
           </>
         )}
       </div>

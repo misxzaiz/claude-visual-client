@@ -2,6 +2,7 @@
  * 消息气泡组件
  */
 
+import { memo, useMemo } from 'react';
 import { type Message } from '../../types';
 import { useToolPanelStore } from '../../stores';
 
@@ -11,30 +12,39 @@ interface MessageBubbleProps {
 }
 
 /** 格式化消息内容（简单的 Markdown 处理） */
-function formatContent(content: string) {
+function formatContent(content: string): string {
   // 代码块
-  content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
+  let formatted = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
     const langLabel = lang ? `<span class="text-xs text-text-tertiary select-none float-right mt-1 ml-2">${lang}</span>` : '';
     return `<div class="relative my-4"><div class="flex items-center justify-between bg-background-surface px-4 py-2 rounded-t-xl border-b border-border"><span class="text-xs text-text-tertiary font-medium">代码</span>${langLabel}</div><pre class="bg-background-elevated p-4 rounded-b-xl overflow-x-auto border-t-0 border shadow-soft"><code class="text-sm text-text-secondary font-mono leading-relaxed">${code.trim()}</code></pre></div>`;
   });
 
   // 行内代码
-  content = content.replace(/`([^`]+)`/g, '<code class="bg-background-surface text-primary px-2 py-1 rounded-lg text-sm font-mono border border-border-subtle">$1</code>');
+  formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-background-surface text-primary px-2 py-1 rounded-lg text-sm font-mono border border-border-subtle">$1</code>');
 
   // 粗体
-  content = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
   // 斜体
-  content = content.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
   // 换行
-  content = content.replace(/\n/g, '<br>');
+  formatted = formatted.replace(/\n/g, '<br>');
 
-  return content;
+  return formatted;
 }
 
-/** 工具摘要标签 */
-function ToolSummary({ summary, onClick }: { summary: NonNullable<Message['toolSummary']>; onClick: () => void }) {
+/** 工具摘要标签 - 独立组件，隔离工具面板订阅 */
+const ToolSummary = memo(function ToolSummary({ summary }: { summary: NonNullable<Message['toolSummary']> }) {
+  // 只在这个组件内订阅工具面板状态，避免影响父组件
+  const { setOpen, isOpen } = useToolPanelStore();
+
+  const handleClick = () => {
+    if (!isOpen) {
+      setOpen(true);
+    }
+  };
+
   return (
     <div className="flex items-center gap-2 mt-2">
       {summary.names.slice(0, 4).map((name) => (
@@ -53,7 +63,7 @@ function ToolSummary({ summary, onClick }: { summary: NonNullable<Message['toolS
         <span className="text-xs text-text-muted">+{summary.names.length - 4}</span>
       )}
       <button
-        onClick={onClick}
+        onClick={handleClick}
         className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary-hover transition-colors"
       >
         查看
@@ -63,44 +73,47 @@ function ToolSummary({ summary, onClick }: { summary: NonNullable<Message['toolS
       </button>
     </div>
   );
-}
+});
 
-export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
-  const isUser = message.role === 'user';
-  const isSystem = message.role === 'system';
-  const { isOpen: toolPanelOpen, setOpen: setToolPanelOpen } = useToolPanelStore();
-
-  const handleToolClick = () => {
-    if (!toolPanelOpen) {
-      setToolPanelOpen(true);
-    }
-  };
-
-  // 用户消息 - 右对齐，渐变背景
-  if (isUser) {
-    return (
-      <div className="flex justify-end mb-6">
-        <div className="max-w-[85%] px-4 py-3 rounded-2xl
-                    bg-gradient-to-br from-primary to-primary-600
-                    text-white shadow-glow">
-          <div className="text-sm leading-relaxed whitespace-pre-wrap">
-            {message.content}
-          </div>
+/** 用户消息组件（独立 memo 化，避免不必要的重渲染） */
+const UserMessage = memo(function UserMessage({ content }: { content: string }) {
+  return (
+    <div className="flex justify-end mb-6">
+      <div className="max-w-[85%] px-4 py-3 rounded-2xl
+                  bg-gradient-to-br from-primary to-primary-600
+                  text-white shadow-glow">
+        <div className="text-sm leading-relaxed whitespace-pre-wrap">
+          {content}
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+});
 
-  // 系统消息
-  if (isSystem) {
-    return (
-      <div className="flex justify-center mb-6">
-        <p className="text-sm text-text-muted italic">{message.content}</p>
-      </div>
-    );
-  }
+/** 系统消息组件（独立 memo 化） */
+const SystemMessage = memo(function SystemMessage({ content }: { content: string }) {
+  return (
+    <div className="flex justify-center mb-6">
+      <p className="text-sm text-text-muted italic">{content}</p>
+    </div>
+  );
+});
 
-  // Claude 消息 - 左侧布局，头像 + 内容
+/** Claude 消息组件（独立 memo 化，包含格式化缓存） */
+const ClaudeMessage = memo(function ClaudeMessage({
+  content,
+  timestamp,
+  isStreaming,
+  toolSummary
+}: {
+  content: string;
+  timestamp?: string;
+  isStreaming?: boolean;
+  toolSummary?: Message['toolSummary'];
+}) {
+  // 缓存格式化结果，只在内容变化时重新格式化
+  const formattedContent = useMemo(() => formatContent(content), [content]);
+
   return (
     <div className="flex gap-3 mb-6">
       {/* Avatar */}
@@ -114,9 +127,9 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
         {/* 头部信息 */}
         <div className="flex items-baseline gap-2">
           <span className="text-sm font-medium text-text-primary">Claude</span>
-          {message.timestamp && (
+          {timestamp && (
             <span className="text-xs text-text-tertiary">
-              {new Date(message.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+              {new Date(timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
         </div>
@@ -124,7 +137,7 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
         {/* 消息内容 */}
         <div
           className="prose prose-invert prose-sm max-w-none"
-          dangerouslySetInnerHTML={{ __html: formatContent(message.content) }}
+          dangerouslySetInnerHTML={{ __html: formattedContent }}
         />
 
         {/* 流式光标 */}
@@ -139,10 +152,47 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
         )}
 
         {/* 工具摘要标签 */}
-        {!isStreaming && message.toolSummary && (
-          <ToolSummary summary={message.toolSummary} onClick={handleToolClick} />
+        {!isStreaming && toolSummary && (
+          <ToolSummary summary={toolSummary} />
         )}
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // 自定义比较函数，只在关键字段变化时重新渲染
+  return (
+    prevProps.content === nextProps.content &&
+    prevProps.isStreaming === nextProps.isStreaming &&
+    prevProps.toolSummary?.count === nextProps.toolSummary?.count
+  );
+});
+
+/** 主消息气泡组件 - 使用 React.memo 避免不必要的重渲染 */
+export const MessageBubble = memo(function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
+  const isUser = message.role === 'user';
+  const isSystem = message.role === 'system';
+
+  if (isUser) {
+    return <UserMessage content={message.content} />;
+  }
+
+  if (isSystem) {
+    return <SystemMessage content={message.content} />;
+  }
+
+  return (
+    <ClaudeMessage
+      content={message.content}
+      timestamp={message.timestamp}
+      isStreaming={isStreaming}
+      toolSummary={message.toolSummary}
+    />
+  );
+}, (prevProps, nextProps) => {
+  // 自定义比较：只在消息内容或流式状态变化时重新渲染
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.isStreaming === nextProps.isStreaming
+  );
+});

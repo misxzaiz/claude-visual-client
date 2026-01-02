@@ -7,6 +7,12 @@ import type { Message, PermissionRequest, StreamEvent } from '../types';
 import * as tauri from '../services/tauri';
 import { useToolPanelStore } from './toolPanelStore';
 
+/** 最大保留消息数量 - 防止内存无限增长 */
+const MAX_MESSAGES = 500;
+
+/** 消息保留阈值 - 当消息数超过此值时开始清理 */
+const MESSAGE_CLEANUP_THRESHOLD = 550;
+
 interface ChatState {
   /** 消息列表 */
   messages: Message[];
@@ -20,6 +26,8 @@ interface ChatState {
   pendingPermission: PermissionRequest | null;
   /** 错误 */
   error: string | null;
+  /** 最大消息数配置 */
+  maxMessages: number;
 
   /** 添加消息 */
   addMessage: (message: Message) => void;
@@ -46,6 +54,8 @@ interface ChatState {
   continueChat: () => Promise<void>;
   /** 中断会话 */
   interruptChat: () => Promise<void>;
+  /** 设置最大消息数 */
+  setMaxMessages: (max: number) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -55,11 +65,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
   currentContent: '',
   pendingPermission: null,
   error: null,
+  maxMessages: MAX_MESSAGES,
 
   addMessage: (message) => {
-    set((state) => ({
-      messages: [...state.messages, message]
-    }));
+    set((state) => {
+      const newMessages = [...state.messages, message];
+
+      // 清理旧消息：当超过阈值时，保留最近的 maxMessages 条
+      if (newMessages.length > MESSAGE_CLEANUP_THRESHOLD) {
+        const cleanupCount = newMessages.length - state.maxMessages;
+        console.log(`[chatStore] 清理 ${cleanupCount} 条旧消息，保留最近 ${state.maxMessages} 条`);
+        return {
+          messages: newMessages.slice(cleanupCount)
+        };
+      }
+
+      return { messages: newMessages };
+    });
   },
 
   clearMessages: () => {
@@ -323,6 +345,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
       get().finishMessage();
     } catch (e) {
       console.error('中断失败:', e);
+    }
+  },
+
+  setMaxMessages: (max: number) => {
+    set({ maxMessages: Math.max(100, max) }); // 最小限制 100 条
+
+    // 如果当前消息数超过新限制，立即清理
+    const { messages } = get();
+    if (messages.length > max) {
+      const cleanupCount = messages.length - max;
+      console.log(`[chatStore] 调整限制，清理 ${cleanupCount} 条旧消息`);
+      set({
+        messages: messages.slice(cleanupCount)
+      });
     }
   },
 }));
