@@ -261,7 +261,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   sendMessage: async (content: string) => {
     const { conversationId } = get();
-    
+
     // 添加用户消息
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -281,11 +281,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (conversationId) {
         // 继续现有会话
         await tauri.continueChat(conversationId, content);
-        console.log('[sendMessage] 继续会话:', conversationId);
       } else {
         // 创建新会话 - 不设置会话ID，等待system事件返回真实ID
         await tauri.startChat(content);
-        console.log('[sendMessage] 创建新会话，等待system事件返回真实session_id');
       }
     } catch (e) {
       set({

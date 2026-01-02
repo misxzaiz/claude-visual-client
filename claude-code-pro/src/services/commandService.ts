@@ -27,13 +27,6 @@ export function parseCommandInput(input: string, availableCommands: Command[]): 
   // 查找命令
   const command = availableCommands.find(cmd => cmd.name === commandName);
 
-  if (!command) {
-    return {
-      type: 'message',
-      error: `未知命令: /${commandName}。输入 /commands 查看可用命令。`
-    };
-  }
-
   // 提取文件引用（@语法）
   const fileRefs: string[] = [];
   const regularArgs: string[] = [];
@@ -52,6 +45,11 @@ export function parseCommandInput(input: string, availableCommands: Command[]): 
     args: regularArgs,
     fileRefs,
   };
+
+  // 未知命令：直接透传给 CLI 处理
+  if (!command) {
+    return { type: 'command', command: parsed };
+  }
 
   // 处理内置命令
   if (command.type === 'builtin') {
