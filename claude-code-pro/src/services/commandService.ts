@@ -300,11 +300,11 @@ export function parseCommandInput(input: string, availableCommands: Command[]): 
 
   // 内置命令 - 需要前端处理
   if (command && command.type === 'builtin') {
-    // compact 命令特殊处理 - 转换为提示词
-    if (commandName === 'compact') {
+    // help 和 commands 有特殊处理，在 ChatInput 中生成消息
+    // 其他内置命令转换为提示词发送给 AI
+    if (commandName !== 'help' && commandName !== 'commands') {
       parsed.fullCommand = convertCommandToPrompt(parsed);
     }
-    // help 和 commands 也在这里处理
     return { type: 'command', command: parsed };
   }
 
