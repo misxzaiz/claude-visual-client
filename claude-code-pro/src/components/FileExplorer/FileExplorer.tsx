@@ -73,40 +73,50 @@ export function FileExplorer() {
     refresh_directory();
   }, [clear_error, refresh_directory]);
 
+  const currentWorkspace = getCurrentWorkspace();
+
   return (
     <div className="h-full flex flex-col">
-      {/* 顶部工具栏 */}
-      <div className="flex items-center justify-between p-2 border-b border-border bg-background-surface">
-        <div className="flex items-center gap-2 flex-1">
-          {/* 当前路径显示 */}
-          <div className="text-xs text-text-tertiary truncate">
-            {current_path || '未选择工作区'}
+      {/* 顶部区域 */}
+      <div className="border-b border-border bg-background-surface">
+        {/* 第一行：工作区名称 */}
+        <div className="px-3 py-2">
+          <div className="text-sm font-medium text-text-primary truncate" title={currentWorkspace?.path}>
+            {currentWorkspace?.name || '未选择工作区'}
           </div>
         </div>
-        
-        {/* 刷新按钮 */}
-        <button
-          onClick={handleRefresh}
-          disabled={loading || is_refreshing}
-          className={`
-            p-1.5 rounded-lg transition-all duration-200
-            ${loading || is_refreshing 
-              ? 'text-text-tertiary cursor-not-allowed' 
-              : 'text-text-secondary hover:text-text-primary hover:bg-background-hover'
-            }
-          `}
-          title="刷新目录 (F5)"
-        >
-          <svg 
-            className={`w-4 h-4 ${is_refreshing ? 'animate-spin' : ''}`}
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor" 
-            strokeWidth={2}
+
+        {/* 第二行：工具栏 */}
+        <div className="flex items-center justify-between px-3 py-2 border-t border-border-subtle">
+          {/* 左侧：工具按钮区域（预留扩展空间） */}
+          <div className="flex items-center gap-1">
+            {/* 未来可添加其他工具按钮，如：返回/前进、收起全部、显示隐藏文件等 */}
+          </div>
+
+          {/* 右侧：刷新按钮 */}
+          <button
+            onClick={handleRefresh}
+            disabled={loading || is_refreshing}
+            className={`
+              p-1.5 rounded-lg transition-all duration-200
+              ${loading || is_refreshing
+                ? 'text-text-tertiary cursor-not-allowed'
+                : 'text-text-secondary hover:text-text-primary hover:bg-background-hover'
+              }
+            `}
+            title="刷新目录 (F5)"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        </button>
+            <svg
+              className={`w-4 h-4 ${is_refreshing ? 'animate-spin' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* 搜索栏 */}
