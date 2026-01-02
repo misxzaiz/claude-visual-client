@@ -117,7 +117,7 @@ function App() {
           )}
 
           {/* 聊天区域 */}
-          <div className="flex flex-col min-w-[300px]">
+          <div className="flex flex-col min-w-[300px] flex-1">
             {/* 状态指示器 */}
             <div className="flex items-center justify-between px-4 py-2 bg-background-elevated border-b border-border-subtle">
               <span className="text-sm text-text-primary">AI 对话</span>
