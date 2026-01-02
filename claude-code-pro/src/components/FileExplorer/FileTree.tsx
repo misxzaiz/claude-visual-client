@@ -71,7 +71,7 @@ export const FileTree = memo<FileTreeProps>(({ files, className = '' }) => {
   }
 
   return (
-    <div className={`py-1 ${className}`}>
+    <div className={`py-1 min-w-max ${className}`}>
       {filteredFiles.map((file) => (
         <FileTreeNode
           key={file.path}

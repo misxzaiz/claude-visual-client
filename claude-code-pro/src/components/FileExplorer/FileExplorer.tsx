@@ -130,7 +130,7 @@ export function FileExplorer() {
       )}
 
       {/* 文件树 */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto overflow-x-auto">
         <FileTree />
       </div>
     </div>

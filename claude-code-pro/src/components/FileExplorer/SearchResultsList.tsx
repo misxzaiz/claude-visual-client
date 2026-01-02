@@ -18,6 +18,20 @@ function getRelativePath(fullPath: string, basePath: string): string {
   return fullPath;
 }
 
+// 获取目录路径（不含文件名）
+function getDirectoryPath(relativePath: string, fileName: string): string {
+  // 找到最后一个路径分隔符
+  const lastSlashIndex = Math.max(
+    relativePath.lastIndexOf('/'),
+    relativePath.lastIndexOf('\\')
+  );
+
+  if (lastSlashIndex >= 0) {
+    return relativePath.substring(0, lastSlashIndex + 1);
+  }
+  return '';
+}
+
 // 格式化文件大小
 const formatFileSize = (bytes?: number): string => {
   if (!bytes) return '';
@@ -67,14 +81,14 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
   const files = results.filter(f => !f.is_dir);
 
   return (
-    <div className="py-1">
+    <div className="py-1 min-w-max">
       {/* 目录 */}
       {directories.length > 0 && (
         <>
           {directories.map((file) => {
             const relativePath = getRelativePath(file.path, current_path);
-            // 移除文件名，只保留目录路径
-            const pathOnly = relativePath.substring(0, relativePath.lastIndexOf(file.name));
+            // 获取目录路径（移除文件名本身）
+            const pathOnly = getDirectoryPath(relativePath, file.name);
 
             return (
               <div
@@ -100,7 +114,7 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
                       {file.name}
                     </div>
                     {/* 第二行：相对路径（小字） */}
-                    {pathOnly && pathOnly !== file.name && (
+                    {pathOnly && (
                       <div
                         className="text-xs text-text-tertiary truncate mt-0.5"
                         title={pathOnly}
@@ -121,8 +135,8 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
       {/* 文件 */}
       {files.map((file) => {
         const relativePath = getRelativePath(file.path, current_path);
-        // 移除文件名，只保留目录路径
-        const pathOnly = relativePath.substring(0, relativePath.lastIndexOf(file.name));
+        // 获取目录路径（移除文件名本身）
+        const pathOnly = getDirectoryPath(relativePath, file.name);
 
         return (
           <div
@@ -150,7 +164,7 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
                 {/* 第二行：相对路径 + 文件大小（小字） */}
                 <div className="flex items-center gap-2 mt-0.5">
                   {/* 路径 */}
-                  {pathOnly && pathOnly !== file.name && (
+                  {pathOnly && (
                     <span
                       className="text-xs text-text-tertiary truncate flex-1 min-w-0"
                       title={pathOnly}
@@ -158,7 +172,7 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
                       {pathOnly}
                     </span>
                   )}
-                  {/* 文件大小（悬停高亮时显示） */}
+                  {/* 文件大小（悬停时显示） */}
                   {file.size && (
                     <span className="text-xs text-text-tertiary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                       {formatFileSize(file.size)}
