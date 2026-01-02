@@ -46,7 +46,12 @@ export const useConfigStore = create<ConfigState>((set) => ({
         tauri.getConfig(),
         tauri.healthCheck(),
       ]);
-      set({ config, healthStatus: health, loading: false, isConnecting: false });
+      // 确保 enableLogging 有默认值
+      const configWithDefaults = {
+        ...config,
+        enableLogging: config.enableLogging ?? true,
+      };
+      set({ config: configWithDefaults, healthStatus: health, loading: false, isConnecting: false });
     } catch (e) {
       set({
         error: e instanceof Error ? e.message : '加载配置失败',

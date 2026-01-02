@@ -6,11 +6,16 @@ mod commands;
 use error::Result;
 use models::config::{Config, HealthStatus};
 use services::config_store::ConfigStore;
+use services::logger::Logger;
 use commands::chat::{start_chat, continue_chat, interrupt_chat};
 use commands::{validate_workspace_path, get_directory_info};
 use commands::file_explorer::{
     read_directory, get_file_content, create_file, create_directory,
     delete_file, rename_file, path_exists, read_commands, search_files
+};
+use commands::logging::{
+    get_log_dir, read_logs, clear_logs, open_log_dir,
+    set_logging_enabled, is_logging_enabled
 };
 use std::sync::Mutex;
 
@@ -95,6 +100,10 @@ pub fn run() {
     let config_store = ConfigStore::new()
         .expect("无法初始化配置存储");
 
+    // 根据配置初始化日志系统
+    let logging_enabled = config_store.get().enable_logging;
+    let _logger_guard = Logger::init(logging_enabled);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -129,6 +138,13 @@ pub fn run() {
             path_exists,
             read_commands,
             search_files,
+            // 日志相关
+            get_log_dir,
+            read_logs,
+            clear_logs,
+            open_log_dir,
+            set_logging_enabled,
+            is_logging_enabled,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,6 +1,7 @@
 pub mod chat;
 pub mod workspace;
 pub mod file_explorer;
+pub mod logging;
 
 // 重新导出命令函数，确保它们在模块级别可见
 pub use chat::{start_chat, continue_chat};

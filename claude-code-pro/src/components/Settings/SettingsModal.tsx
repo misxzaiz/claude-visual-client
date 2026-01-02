@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useConfigStore } from '../../stores';
 import { Button } from '../Common';
 import type { Config, PermissionMode } from '../../types';
+import * as tauri from '../../services/tauri';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -10,10 +11,11 @@ interface SettingsModalProps {
 export function SettingsModal({ onClose }: SettingsModalProps) {
   const { config, loading, error, updateConfig } = useConfigStore();
   const [localConfig, setLocalConfig] = useState<Config | null>(config);
+  const [logActionLoading, setLogActionLoading] = useState<string | null>(null);
 
   const handleSave = async () => {
     if (!localConfig) return;
-    
+
     try {
       await updateConfig(localConfig);
       onClose();
@@ -30,6 +32,39 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const handleClaudeCmdChange = (cmd: string) => {
     if (!localConfig) return;
     setLocalConfig({ ...localConfig, claudeCmd: cmd });
+  };
+
+  const handleLoggingToggle = async (enabled: boolean) => {
+    if (!localConfig) return;
+    setLocalConfig({ ...localConfig, enableLogging: enabled });
+    try {
+      await tauri.setLoggingEnabled(enabled);
+    } catch (error) {
+      console.error('设置日志开关失败:', error);
+    }
+  };
+
+  const handleOpenLogDir = async () => {
+    setLogActionLoading('open');
+    try {
+      await tauri.openLogDir();
+    } catch (error) {
+      console.error('打开日志目录失败:', error);
+    } finally {
+      setLogActionLoading(null);
+    }
+  };
+
+  const handleClearLogs = async () => {
+    if (!confirm('确定要清空所有日志吗？此操作不可撤销。')) return;
+    setLogActionLoading('clear');
+    try {
+      await tauri.clearLogs();
+    } catch (error) {
+      console.error('清空日志失败:', error);
+    } finally {
+      setLogActionLoading(null);
+    }
   };
 
   if (!localConfig) {
@@ -111,6 +146,51 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               <strong>允许编辑：</strong>允许文件编辑操作
             </div>
           </div>
+        </div>
+
+        {/* 日志设置 */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-text-secondary mb-2">
+            日志设置
+          </label>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-text-primary">启用日志</span>
+            <button
+              onClick={() => handleLoggingToggle(!localConfig.enableLogging)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                localConfig.enableLogging ? 'bg-primary' : 'bg-border'
+              }`}
+            >
+              <span
+                className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
+                  localConfig.enableLogging ? 'translate-x-5' : ''
+                }`}
+              />
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleOpenLogDir}
+              disabled={logActionLoading === 'open'}
+              className="flex-1"
+            >
+              {logActionLoading === 'open' ? '打开中...' : '打开日志目录'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearLogs}
+              disabled={logActionLoading === 'clear'}
+              className="flex-1"
+            >
+              {logActionLoading === 'clear' ? '清空中...' : '清空日志'}
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-text-tertiary">
+            日志保存在本地，用于调试和错误排查
+          </p>
         </div>
 
         {/* 工作目录 */}

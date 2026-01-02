@@ -6,6 +6,13 @@ use std::process::{Command, Stdio, Child};
 use tauri::{Emitter, Window};
 use uuid::Uuid;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+/// Windows 进程创建标志：不创建新窗口
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 /// Claude 聊天会话
 pub struct ChatSession {
     pub id: String,
@@ -59,6 +66,10 @@ impl ChatSession {
 
         cmd.stdout(Stdio::piped())
             .stderr(Stdio::piped());
+
+        // Windows 上隐藏 CMD 窗口
+        #[cfg(windows)]
+        cmd.creation_flags(CREATE_NO_WINDOW);
 
         // 设置工作目录
         if let Some(ref work_dir) = config.work_dir {
@@ -259,6 +270,10 @@ pub async fn continue_chat(
 
     cmd.stdout(Stdio::piped())
         .stderr(Stdio::piped());
+
+    // Windows 上隐藏 CMD 窗口
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
 
     // 设置工作目录
     if let Some(ref work_dir) = config.work_dir {

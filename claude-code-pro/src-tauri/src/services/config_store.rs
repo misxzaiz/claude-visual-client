@@ -239,6 +239,17 @@ impl ConfigStore {
         self.config.session_dir = Some(path);
         self.save()
     }
+
+    /// 设置日志开关
+    pub fn set_enable_logging(&mut self, enabled: bool) -> Result<()> {
+        self.config.enable_logging = enabled;
+        self.save()
+    }
+
+    /// 获取日志开关状态
+    pub fn enable_logging(&self) -> bool {
+        self.config.enable_logging
+    }
 }
 
 impl Default for ConfigStore {
