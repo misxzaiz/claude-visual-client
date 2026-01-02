@@ -6,7 +6,7 @@ mod commands;
 use error::Result;
 use models::config::{Config, HealthStatus};
 use services::config_store::ConfigStore;
-use commands::chat::{start_chat, continue_chat};
+use commands::chat::{start_chat, continue_chat, interrupt_chat};
 use commands::{validate_workspace_path, get_directory_info};
 use commands::file_explorer::{
     read_directory, get_file_content, create_file, create_directory,
@@ -14,9 +14,12 @@ use commands::file_explorer::{
 };
 use std::sync::Mutex;
 
+use std::collections::HashMap;
+
 /// 全局配置状态
 pub struct AppState {
     pub config_store: Mutex<ConfigStore>,
+    pub sessions: Mutex<HashMap<String, u32>>, // session_id -> process_id
 }
 
 // ============================================================================
@@ -97,6 +100,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             config_store: Mutex::new(config_store),
+            sessions: Mutex::new(HashMap::new()),
         })
         .invoke_handler(tauri::generate_handler![
             // 配置相关
@@ -111,6 +115,7 @@ pub fn run() {
             // 聊天相关
             start_chat,
             continue_chat,
+            interrupt_chat,
             // 工作区相关
             validate_workspace_path,
             get_directory_info,

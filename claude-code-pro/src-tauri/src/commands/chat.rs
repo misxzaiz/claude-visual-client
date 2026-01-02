@@ -179,8 +179,18 @@ pub async fn start_chat(
 
     let session_id = session.id.clone();
     let window_clone = window.clone();
+    let process_id = session.child.id();
 
-    eprintln!("[start_chat] 会话 ID: {}", session_id);
+    eprintln!("[start_chat] 会话 ID: {}, 进程 ID: {}", session_id, process_id);
+
+    // 将进程ID存储到全局sessions中
+    {
+        let mut sessions = state.sessions.lock()
+            .map_err(|e| crate::error::AppError::Unknown(e.to_string()))?;
+        sessions.insert(session_id.clone(), process_id);
+    }
+
+    
 
     // 在后台线程中读取输出
     std::thread::spawn(move || {
@@ -192,6 +202,7 @@ pub async fn start_chat(
             eprintln!("[start_chat] 发送事件: {}", event_json);
             let _ = window_clone.emit("chat-event", event_json);
         });
+        
         eprintln!("[start_chat] 后台线程结束");
     });
 
@@ -268,9 +279,18 @@ pub async fn continue_chat(
 
     eprintln!("[continue_chat] 进程 PID: {:?}", child.id());
 
+    let process_id = child.id();
     let session = ChatSession::with_id_and_child(session_id.clone(), child);
-
     let window_clone = window.clone();
+
+    eprintln!("[continue_chat] 会话 ID: {}, 进程 ID: {}", session_id, process_id);
+
+    // 将进程ID存储到全局sessions中
+    {
+        let mut sessions = state.sessions.lock()
+            .map_err(|e| crate::error::AppError::Unknown(e.to_string()))?;
+        sessions.insert(session_id.clone(), process_id);
+    }
 
     // 在后台线程中读取输出
     std::thread::spawn(move || {
@@ -282,8 +302,79 @@ pub async fn continue_chat(
             eprintln!("[continue_chat] 发送事件: {}", event_json);
             let _ = window_clone.emit("chat-event", event_json);
         });
+        
         eprintln!("[continue_chat] 后台线程结束");
     });
 
+    Ok(())
+}
+
+/// 中断聊天会话
+#[tauri::command]
+pub async fn interrupt_chat(
+    session_id: String,
+    state: tauri::State<'_, crate::AppState>,
+) -> Result<()> {
+    eprintln!("[interrupt_chat] 中断会话: {}", session_id);
+    
+    // 从sessions中获取并移除进程ID
+    let mut sessions = state.sessions.lock()
+        .map_err(|e| crate::error::AppError::Unknown(e.to_string()))?;
+    
+    if let Some(process_id) = sessions.remove(&session_id) {
+        eprintln!("[interrupt_chat] 找到进程 PID: {}", process_id);
+        
+        // 使用系统API终止进程
+        #[cfg(windows)]
+        {
+            use std::process::Command;
+            let result = Command::new("taskkill")
+                .args(["/F", "/PID", &process_id.to_string()])
+                .output();
+                
+            match result {
+                Ok(output) => {
+                    if output.status.success() {
+                        eprintln!("[interrupt_chat] 成功终止进程");
+                    } else {
+                        eprintln!("[interrupt_chat] 终止进程失败: {}", String::from_utf8_lossy(&output.stderr));
+                        return Err(AppError::ProcessError(format!("无法终止进程: {}", String::from_utf8_lossy(&output.stderr))));
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[interrupt_chat] 执行taskkill命令失败: {}", e);
+                    return Err(AppError::ProcessError(format!("无法终止进程: {}", e)));
+                }
+            }
+        }
+        
+        #[cfg(not(windows))]
+        {
+            use std::process::Command;
+            let result = Command::new("kill")
+                .arg("-9")
+                .arg(process_id.to_string())
+                .output();
+                
+            match result {
+                Ok(output) => {
+                    if output.status.success() {
+                        eprintln!("[interrupt_chat] 成功终止进程");
+                    } else {
+                        eprintln!("[interrupt_chat] 终止进程失败: {}", String::from_utf8_lossy(&output.stderr));
+                        return Err(AppError::ProcessError(format!("无法终止进程: {}", String::from_utf8_lossy(&output.stderr))));
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[interrupt_chat] 执行kill命令失败: {}", e);
+                    return Err(AppError::ProcessError(format!("无法终止进程: {}", e)));
+                }
+            }
+        }
+    } else {
+        eprintln!("[interrupt_chat] 未找到会话: {}", session_id);
+        return Err(AppError::ProcessError(format!("未找到会话: {}", session_id)));
+    }
+    
     Ok(())
 }
