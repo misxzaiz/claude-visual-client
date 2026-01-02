@@ -3,6 +3,16 @@ use std::path::Path;
 use std::fs;
 use std::time::SystemTime;
 
+/// 文件搜索结果（用于 @file 引用）
+#[derive(serde::Serialize)]
+pub struct FileMatch {
+    pub name: String,
+    pub relative_path: String,
+    pub full_path: String,
+    pub is_dir: bool,
+    pub extension: Option<String>,
+}
+
 /// 命令文件结构（从 .claude/commands/ 读取）
 #[derive(serde::Serialize)]
 pub struct CommandFile {
@@ -328,4 +338,123 @@ fn parse_simple_params(params_str: &str) -> Vec<CommandParam> {
     }
 
     result
+}
+
+/// 搜索文件（用于 @file 引用）
+/// 支持模糊匹配文件名，并返回相对路径
+#[tauri::command]
+pub async fn search_files(
+    work_dir: String,
+    query: String,
+    max_results: Option<usize>
+) -> Result<Vec<FileMatch>> {
+    let base_path = Path::new(&work_dir);
+    let max_results = max_results.unwrap_or(20);
+
+    if !base_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let query_lower = query.to_lowercase();
+    let mut results = Vec::new();
+
+    // 解析查询：可能是 "path/file" 格式
+    let query_parts: Vec<String> = query_lower.split('/').map(|s| s.to_string()).collect();
+    let name_query = query_parts.last().map(|s| s.as_str()).unwrap_or(&query_lower);
+    let path_filters: Vec<String> = if query_parts.len() > 1 {
+        query_parts[..query_parts.len() - 1].to_vec()
+    } else {
+        Vec::new()
+    };
+
+    // 递归搜索
+    search_recursive(
+        base_path,
+        base_path,
+        name_query,
+        &path_filters.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+        0,
+        &mut results,
+        max_results,
+    )?;
+
+    Ok(results)
+}
+
+/// 递归搜索文件
+fn search_recursive(
+    base_path: &Path,
+    current_path: &Path,
+    name_query: &str,
+    path_filters: &[&str],
+    depth: usize,
+    results: &mut Vec<FileMatch>,
+    max_results: usize,
+) -> Result<()> {
+    // 达到最大结果数或深度限制
+    if results.len() >= max_results || depth > 5 {
+        return Ok(());
+    }
+
+    let entries = fs::read_dir(current_path)?;
+
+    for entry in entries {
+        if results.len() >= max_results {
+            break;
+        }
+
+        let entry = entry?;
+        let path = entry.path();
+        let name = path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+
+        // 跳过隐藏文件和特殊目录
+        if name.starts_with('.') || name == "node_modules" || name == "target" {
+            continue;
+        }
+
+        let is_dir = path.is_dir();
+        let name_lower = name.to_lowercase();
+
+        // 计算相对路径
+        let relative_path = pathdiff::diff_paths(&path, base_path)
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| path.to_string_lossy().to_string());
+
+        // 检查路径过滤器
+        let relative_path_lower = relative_path.to_lowercase();
+        let passes_path_filter = path_filters.is_empty()
+            || path_filters.iter().all(|filter| relative_path_lower.contains(filter));
+
+        // 如果是文件，检查名称匹配
+        if !is_dir && name_lower.contains(name_query) && passes_path_filter {
+            let extension = path.extension()
+                .and_then(|e| e.to_str())
+                .map(|s| s.to_lowercase());
+
+            results.push(FileMatch {
+                name: name.to_string(),
+                relative_path: relative_path.clone(),
+                full_path: path.to_string_lossy().to_string(),
+                is_dir: false,
+                extension,
+            });
+        }
+
+        // 如果是目录，递归搜索
+        if is_dir {
+            search_recursive(
+                base_path,
+                &path,
+                name_query,
+                path_filters,
+                depth + 1,
+                results,
+                max_results,
+            )?;
+        }
+    }
+
+    Ok(())
 }

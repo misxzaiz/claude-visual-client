@@ -10,7 +10,7 @@ use commands::chat::{start_chat, continue_chat};
 use commands::{validate_workspace_path, get_directory_info};
 use commands::file_explorer::{
     read_directory, get_file_content, create_file, create_directory,
-    delete_file, rename_file, path_exists, read_commands
+    delete_file, rename_file, path_exists, read_commands, search_files
 };
 use std::sync::Mutex;
 
@@ -122,6 +122,7 @@ pub fn run() {
             rename_file,
             path_exists,
             read_commands,
+            search_files,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

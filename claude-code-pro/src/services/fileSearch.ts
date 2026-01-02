@@ -6,67 +6,45 @@ import { invoke } from '@tauri-apps/api/core';
 
 export interface FileMatch {
   name: string;
-  path: string;
+  relativePath: string;  // 相对路径，如 "src/components/App.tsx"
+  fullPath: string;      // 完整路径
   is_dir: boolean;
   extension?: string;
 }
 
 /**
  * 在工作区中搜索文件
- * @param query 搜索关键词（文件名）
+ * @param query 搜索关键词（支持 "path/file" 格式）
  * @param workDir 工作目录
  * @param maxResults 最大结果数
+ *
+ * 示例:
+ * - "app" -> 搜索所有包含 "app" 的文件
+ * - "src/app" -> 在 src 目录下搜索包含 "app" 的文件
  */
 export async function searchFiles(
   query: string,
   workDir: string | null,
-  maxResults: number = 10
+  maxResults: number = 15
 ): Promise<FileMatch[]> {
   if (!workDir || !query.trim()) {
     return [];
   }
 
-  const lowerQuery = query.toLowerCase();
-
   try {
-    const files = await invoke<any[]>('read_directory', { path: workDir });
+    const results = await invoke<FileMatch[]>('search_files', {
+      workDir: workDir,
+      query: query.trim(),
+      maxResults,
+    });
 
-    const results: FileMatch[] = [];
-
-    // 递归搜索（简化版，只搜索当前目录和一层子目录）
-    async function searchRecursive(entries: any[], depth: number = 0) {
-      if (depth > 2 || results.length >= maxResults) return;
-
-      for (const entry of entries) {
-        if (results.length >= maxResults) break;
-
-        const name = entry.name.toLowerCase();
-
-        // 匹配文件名
-        if (name.includes(lowerQuery)) {
-          results.push({
-            name: entry.name,
-            path: entry.path,
-            is_dir: entry.is_dir,
-            extension: entry.extension,
-          });
-        }
-
-        // 如果是目录，递归搜索
-        if (entry.is_dir && depth < 2) {
-          try {
-            const subFiles = await invoke<any[]>('read_directory', { path: entry.path });
-            await searchRecursive(subFiles, depth + 1);
-          } catch {
-            // 忽略无法访问的目录
-          }
-        }
-      }
-    }
-
-    await searchRecursive(files);
-
-    return results;
+    return results.map(r => ({
+      name: r.name,
+      relativePath: r.relativePath,
+      fullPath: r.fullPath,
+      is_dir: r.is_dir,
+      extension: r.extension,
+    }));
   } catch (error) {
     console.error('Failed to search files:', error);
     return [];

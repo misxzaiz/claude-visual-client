@@ -28,4 +28,5 @@ uuid = { version = "1", features = ["v4", "serde"] }
 dirs = "5"
 thiserror = "1"
 chrono = { version = "0.4", features = ["serde"] }
+pathdiff = "0.2"
 

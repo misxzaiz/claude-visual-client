@@ -25,7 +25,8 @@
       "Bash(powershell:*)",
       "Bash(powershell.exe:*)",
       "Bash(timeout:*)",
-      "Bash(exit:*)"
+      "Bash(exit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

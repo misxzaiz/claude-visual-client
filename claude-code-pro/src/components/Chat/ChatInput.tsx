@@ -154,8 +154,8 @@ export function ChatInput({
     const textBeforeCursor = value.slice(0, cursorPosition);
     const textAfterCursor = value.slice(cursorPosition);
 
-    // 替换文件引用部分
-    const newText = textBeforeCursor.replace(/@[^\s]*$/, `@${file.name} `) + textAfterCursor;
+    // 替换文件引用部分 - 使用相对路径
+    const newText = textBeforeCursor.replace(/@[^\s]*$/, `@${file.relativePath} `) + textAfterCursor;
     setValue(newText);
     setShowFileSuggestions(false);
 
