@@ -13,6 +13,8 @@ interface ConfigState {
   healthStatus: HealthStatus | null;
   /** 加载中 */
   loading: boolean;
+  /** 连接中（首次启动） */
+  isConnecting: boolean;
   /** 错误 */
   error: string | null;
 
@@ -34,20 +36,22 @@ export const useConfigStore = create<ConfigState>((set) => ({
   config: null,
   healthStatus: null,
   loading: false,
+  isConnecting: true,  // 默认为 true，显示连接蒙板
   error: null,
 
   loadConfig: async () => {
-    set({ loading: true, error: null });
+    set({ loading: true, isConnecting: true, error: null });
     try {
       const [config, health] = await Promise.all([
         tauri.getConfig(),
         tauri.healthCheck(),
       ]);
-      set({ config, healthStatus: health, loading: false });
+      set({ config, healthStatus: health, loading: false, isConnecting: false });
     } catch (e) {
       set({
         error: e instanceof Error ? e.message : '加载配置失败',
-        loading: false
+        loading: false,
+        isConnecting: false
       });
     }
   },

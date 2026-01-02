@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Layout, Sidebar, Main, StatusIndicator, SettingsModal, FileExplorer, ResizeHandle } from './components/Common';
+import { Layout, Sidebar, Main, StatusIndicator, SettingsModal, FileExplorer, ResizeHandle, ConnectingOverlay } from './components/Common';
 import { ChatMessages, ChatInput } from './components/Chat';
 import { ToolPanel } from './components/ToolPanel';
 import { EditorPanel } from './components/Editor';
@@ -10,7 +10,7 @@ import { useChatEvent } from './hooks';
 import './index.css';
 
 function App() {
-  const { healthStatus, loadConfig, refreshHealth } = useConfigStore();
+  const { healthStatus, isConnecting, loadConfig, refreshHealth } = useConfigStore();
   const {
     messages,
     currentContent,
@@ -71,6 +71,9 @@ function App() {
 
   return (
     <Layout>
+      {/* 连接中蒙板 */}
+      {isConnecting && <ConnectingOverlay />}
+
       {/* 顶部菜单栏 */}
       <TopMenuBarComponent
         onNewConversation={() => {

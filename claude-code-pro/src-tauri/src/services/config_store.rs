@@ -215,8 +215,8 @@ impl ConfigStore {
 
     /// 获取健康状态
     pub fn health_status(&self) -> HealthStatus {
-        let claude_available = self.detect_claude().is_some();
         let claude_version = self.detect_claude();
+        let claude_available = claude_version.is_some();
 
         HealthStatus {
             claude_available,
