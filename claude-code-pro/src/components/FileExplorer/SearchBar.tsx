@@ -1,19 +1,50 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useFileExplorerStore } from '../../stores';
 
+// 防抖 hook
+function useDebounce(value: string, delay: number): string {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export function SearchBar() {
-  const { search_query, set_search_query } = useFileExplorerStore();
+  const {
+    search_query,
+    set_search_query,
+    search_results_count,
+    search_is_deep_loading
+  } = useFileExplorerStore();
+
   const [localQuery, setLocalQuery] = useState(search_query);
+  const previousDebouncedQuery = useRef<string>('');
 
   // 同步外部状态
   useEffect(() => {
     setLocalQuery(search_query);
+    previousDebouncedQuery.current = search_query;
   }, [search_query]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    set_search_query(localQuery);
-  };
+  // 防抖处理
+  const debouncedQuery = useDebounce(localQuery, 300);
+
+  // 当防抖后的值变化时，触发搜索
+  useEffect(() => {
+    if (previousDebouncedQuery.current !== debouncedQuery) {
+      previousDebouncedQuery.current = debouncedQuery;
+      set_search_query(debouncedQuery);
+    }
+  }, [debouncedQuery, set_search_query]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalQuery(e.target.value);
@@ -25,14 +56,14 @@ export function SearchBar() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-2 border-b border-border">
+    <form onSubmit={(e) => e.preventDefault()} className="p-2 border-b border-border">
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <svg className="w-4 h-4 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
-        
+
         <input
           type="text"
           value={localQuery}
@@ -40,7 +71,7 @@ export function SearchBar() {
           placeholder="搜索文件..."
           className="w-full pl-10 pr-10 py-1.5 bg-background-surface border border-border rounded-lg text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
         />
-        
+
         {localQuery && (
           <button
             type="button"
@@ -53,10 +84,19 @@ export function SearchBar() {
           </button>
         )}
       </div>
-      
+
       {search_query && (
-        <div className="mt-1 text-xs text-text-tertiary">
-          找到 {useFileExplorerStore().file_tree.length} 个结果
+        <div className="mt-1 text-xs text-text-tertiary flex items-center gap-1">
+          {search_is_deep_loading ? (
+            <>
+              <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>搜索中... 已找到 {search_results_count} 个</span>
+            </>
+          ) : (
+            <span>找到 {search_results_count} 个文件</span>
+          )}
         </div>
       )}
     </form>

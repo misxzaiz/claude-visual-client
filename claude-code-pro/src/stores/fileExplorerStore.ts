@@ -6,22 +6,68 @@ import { create } from 'zustand';
 import type { FileExplorerStore, FileInfo } from '../types';
 import * as tauri from '../services/tauri';
 
+// 搜索取消令牌（用于取消正在进行的搜索）
+let searchAbortController: AbortController | null = null;
+
 // 辅助函数：更新文件树中的子节点
 function updateFolderChildren(tree: FileInfo[], folderPath: string, children: FileInfo[]): FileInfo[] {
   return tree.map(file => {
     if (file.path === folderPath) {
       return { ...file, children: children || undefined };
     }
-    
+
     if (file.children) {
       return {
         ...file,
         children: updateFolderChildren(file.children, folderPath, children) || undefined
       };
     }
-    
+
     return file;
   });
+}
+
+// 辅助函数：递归过滤文件树
+function filterFiles(files: FileInfo[], query: string): FileInfo[] {
+  if (!query.trim()) return files;
+
+  const lowerQuery = query.toLowerCase();
+
+  return files.reduce((acc: FileInfo[], file) => {
+    const nameMatches = file.name.toLowerCase().includes(lowerQuery);
+
+    if (file.is_dir) {
+      // 对于目录，检查名称是否匹配或子文件是否匹配
+      const filteredChildren = file.children ? filterFiles(file.children, query) : [];
+
+      if (nameMatches || filteredChildren.length > 0) {
+        acc.push({
+          ...file,
+          children: filteredChildren.length > 0 ? filteredChildren : file.children
+        });
+      }
+    } else if (nameMatches) {
+      // 对于文件，只检查名称是否匹配
+      acc.push(file);
+    }
+
+    return acc;
+  }, []);
+}
+
+// 辅助函数：递归计数文件数量（排除目录）
+function countFiles(files: FileInfo[]): number {
+  let count = 0;
+  for (const file of files) {
+    if (file.is_dir) {
+      if (file.children) {
+        count += countFiles(file.children);
+      }
+    } else {
+      count++;
+    }
+  }
+  return count;
 }
 
 export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
@@ -31,6 +77,9 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
   selected_file: null,
   expanded_folders: new Set(),
   search_query: '',
+  search_results_count: undefined,
+  search_is_deep_loading: false,
+  search_results: undefined,
   loading: false,
   error: null,
   folder_cache: new Map(), // 文件夹内容缓存
@@ -166,9 +215,118 @@ export const useFileExplorerStore = create<FileExplorerStore>((set, get) => ({
     });
   },
 
-  // 设置搜索查询
-  set_search_query: (query: string) => {
+  // 设置搜索查询（两阶段搜索：快速 + 深度）
+  set_search_query: async (query: string) => {
+    // 取消之前的搜索
+    if (searchAbortController) {
+      searchAbortController.abort();
+    }
+    searchAbortController = new AbortController();
+    const signal = searchAbortController.signal;
+
+    // 立即更新查询状态
     set({ search_query: query });
+
+    // 清空搜索
+    if (!query.trim()) {
+      set({
+        search_results_count: undefined,
+        search_results: undefined,
+        search_is_deep_loading: false
+      });
+      return;
+    }
+
+    // 阶段1：快速搜索（基于已加载的文件树，同步）
+    const quickFiltered = filterFiles(get().file_tree, query);
+    const quickCount = countFiles(quickFiltered);
+    set({
+      search_results_count: quickCount,
+      search_is_deep_loading: true
+    });
+
+    // 阶段2：深度搜索（异步，不阻塞 UI）
+    try {
+      const deepResults = await get().deep_search(query);
+      if (!signal.aborted) {
+        set({
+          search_results: deepResults,
+          search_results_count: deepResults.length,
+          search_is_deep_loading: false
+        });
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('深度搜索失败:', error);
+        set({ search_is_deep_loading: false });
+      }
+    }
+  },
+
+  // 深度搜索：递归遍历所有目录
+  deep_search: async (query: string) => {
+    const results: FileInfo[] = [];
+    const visited = new Set<string>();
+    const lowerQuery = query.toLowerCase().trim();
+
+    if (!lowerQuery) {
+      return [];
+    }
+
+    // 递归搜索函数
+    const searchDir = async (dirPath: string): Promise<void> => {
+      // 检查是否被取消
+      if (searchAbortController?.signal.aborted) {
+        throw new DOMException('搜索已取消', 'AbortError');
+      }
+
+      // 防止循环
+      if (visited.has(dirPath)) {
+        return;
+      }
+      visited.add(dirPath);
+
+      try {
+        const files = await tauri.readDirectory(dirPath) as FileInfo[];
+
+        for (const file of files) {
+          // 检查文件名是否匹配
+          if (file.name.toLowerCase().includes(lowerQuery)) {
+            results.push(file);
+          }
+
+          // 如果是目录，递归搜索
+          if (file.is_dir) {
+            await searchDir(file.path);
+          }
+        }
+      } catch (error) {
+        // 忽略无法访问的目录
+        console.debug(`搜索目录失败: ${dirPath}`);
+      }
+    };
+
+    // 从当前工作区根目录开始搜索
+    const { current_path } = get();
+    if (current_path) {
+      await searchDir(current_path);
+    }
+
+    return results;
+  },
+
+  // 取消搜索
+  cancel_search: () => {
+    if (searchAbortController) {
+      searchAbortController.abort();
+      searchAbortController = null;
+    }
+    set({
+      search_is_deep_loading: false,
+      search_query: '',
+      search_results: undefined,
+      search_results_count: undefined
+    });
   },
 
   // 创建文件

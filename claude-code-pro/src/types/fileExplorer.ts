@@ -49,6 +49,12 @@ export interface FileExplorerState {
   expanded_folders: Set<string>;
   /** 搜索查询 */
   search_query: string;
+  /** 搜索结果数量（undefined 表示无搜索） */
+  search_results_count?: number;
+  /** 搜索是否正在进行深度加载 */
+  search_is_deep_loading?: boolean;
+  /** 搜索结果（扁平化列表） */
+  search_results?: FileInfo[];
   /** 是否正在加载 */
   loading: boolean;
   /** 错误信息 */
@@ -75,7 +81,11 @@ export interface FileExplorerActions {
   /** 切换文件夹展开状态 */
   toggle_folder: (path: string) => void;
   /** 设置搜索查询 */
-  set_search_query: (query: string) => void;
+  set_search_query: (query: string) => Promise<void>;
+  /** 深度搜索（递归遍历所有目录） */
+  deep_search: (query: string) => Promise<FileInfo[]>;
+  /** 取消搜索 */
+  cancel_search: () => void;
   /** 创建文件 */
   create_file: (path: string, content?: string) => Promise<void>;
   /** 创建目录 */
