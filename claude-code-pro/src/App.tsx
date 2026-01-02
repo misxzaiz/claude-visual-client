@@ -43,15 +43,15 @@ function App() {
   // 监听聊天流事件
   useChatEvent(handleStreamEvent);
 
-  // Sidebar 拖拽处理（右边手柄：向左拖减小宽度）
+  // Sidebar 拖拽处理（右边手柄）
   const handleSidebarResize = (delta: number) => {
-    const newWidth = Math.max(150, Math.min(600, sidebarWidth - delta));
+    const newWidth = Math.max(150, Math.min(600, sidebarWidth + delta));
     setSidebarWidth(newWidth);
   };
 
-  // ToolPanel 拖拽处理（左边手柄：向左拖减小宽度）
+  // ToolPanel 拖拽处理（左边手柄）
   const handleToolPanelResize = (delta: number) => {
-    const newWidth = Math.max(200, Math.min(600, toolPanelWidth + delta));
+    const newWidth = Math.max(200, Math.min(600, toolPanelWidth - delta));
     setToolPanelWidth(newWidth);
   };
 
