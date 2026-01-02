@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { useFileExplorerStore, useWorkspaceStore } from '../../stores';
+import { useFileExplorerStore, useWorkspaceStore, useCommandStore } from '../../stores';
 import { FileTree } from './FileTree';
 import { SearchBar } from './SearchBar';
 
@@ -15,6 +15,7 @@ export function FileExplorer() {
   } = useFileExplorerStore();
 
   const { getCurrentWorkspace } = useWorkspaceStore();
+  const { loadCustomCommands } = useCommandStore();
 
   // 监听工作区变化，自动加载新工作区
   useEffect(() => {
@@ -23,10 +24,12 @@ export function FileExplorer() {
       console.log('Workspace changed:', workspaceId);
       // 获取当前工作区信息并加载
       const currentWorkspace = getCurrentWorkspace();
-      
+
       if (currentWorkspace) {
         console.log('Loading workspace:', currentWorkspace.path);
         load_directory(currentWorkspace.path);
+        // 加载自定义命令
+        loadCustomCommands(currentWorkspace.path);
       }
     };
 
@@ -57,12 +60,13 @@ export function FileExplorer() {
   // 初始化加载工作区目录
   useEffect(() => {
     const currentWorkspace = getCurrentWorkspace();
-    
+
     if (currentWorkspace && current_path !== currentWorkspace.path) {
       console.log('Initial loading workspace:', currentWorkspace.path);
       load_directory(currentWorkspace.path);
+      loadCustomCommands(currentWorkspace.path);
     }
-  }, [load_directory, current_path, getCurrentWorkspace]);
+  }, [load_directory, current_path, getCurrentWorkspace, loadCustomCommands]);
 
   const handleRefresh = useCallback(() => {
     clear_error();

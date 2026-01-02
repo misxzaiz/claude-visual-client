@@ -3,6 +3,23 @@ use std::path::Path;
 use std::fs;
 use std::time::SystemTime;
 
+/// 命令文件结构（从 .claude/commands/ 读取）
+#[derive(serde::Serialize)]
+pub struct CommandFile {
+    pub name: String,
+    pub description: Option<String>,
+    pub params: Option<Vec<CommandParam>>,
+    pub content: String,
+    pub file_path: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct CommandParam {
+    pub name: String,
+    pub description: Option<String>,
+    pub required: Option<bool>,
+}
+
 /// 文件信息结构
 #[derive(serde::Serialize)]
 pub struct FileInfo {
@@ -183,4 +200,132 @@ pub async fn rename_file(old_path: String, new_name: String) -> Result<()> {
 #[tauri::command]
 pub async fn path_exists(path: String) -> Result<bool> {
     Ok(Path::new(&path).exists())
+}
+
+/// 读取工作区中的自定义命令
+/// 从 .claude/commands/ 目录读取 .md 文件
+#[tauri::command]
+pub async fn read_commands(work_dir: Option<String>) -> Result<Vec<CommandFile>> {
+    let mut commands = Vec::new();
+
+    let work_path = work_dir.unwrap_or_else(|| String::from("."));
+    let base_path = Path::new(&work_path);
+
+    // 构建 .claude/commands/ 路径
+    let commands_dir = base_path.join(".claude").join("commands");
+
+    if !commands_dir.exists() {
+        return Ok(commands);
+    }
+
+    // 读取目录中的 .md 文件
+    let entries = fs::read_dir(&commands_dir)?;
+
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+
+        // 只处理 .md 文件
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+
+        // 读取文件内容
+        let content = fs::read_to_string(&path)?;
+
+        // 解析文件
+        if let Ok(cmd) = parse_command_file(&content, &path) {
+            commands.push(cmd);
+        }
+    }
+
+    // 按名称排序
+    commands.sort_by(|a, b| a.name.cmp(&b.name));
+
+    Ok(commands)
+}
+
+/// 解析命令文件（YAML frontmatter + 内容）
+fn parse_command_file(content: &str, path: &Path) -> Result<CommandFile> {
+    let lines: Vec<&str> = content.lines().collect();
+
+    // 查找 frontmatter 分隔符
+    let frontmatter_start = if lines.first().map_or(false, |l| l.trim() == "---") {
+        1
+    } else {
+        0
+    };
+
+    let frontmatter_end = if frontmatter_start > 0 {
+        lines[frontmatter_start..]
+            .iter()
+            .position(|l| l.trim() == "---")
+            .map_or(lines.len(), |i| frontmatter_start + i)
+    } else {
+        0
+    };
+
+    // 提取文件名（去掉 .md 扩展名）
+    let name = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("unknown")
+        .to_string();
+
+    let mut description = None;
+    let mut params = None;
+
+    // 解析 frontmatter
+    if frontmatter_end > frontmatter_start {
+        let frontmatter: String = lines[frontmatter_start..frontmatter_end].join("\n");
+
+        // 简单解析（实际项目可以用 serde_yaml 等库）
+        for line in frontmatter.lines() {
+            let line = line.trim();
+            if let Some(rest) = line.strip_prefix("description:") {
+                description = Some(rest.trim().trim_matches('"').trim_matches('\'').to_string());
+            } else if let Some(rest) = line.strip_prefix("params:") {
+                // 简单参数解析
+                params = Some(parse_simple_params(rest.trim()));
+            }
+        }
+    }
+
+    // 提取命令内容（frontmatter 之后的部分）
+    let command_content = if frontmatter_end > 0 {
+        lines.get(frontmatter_end + 1)
+            .map_or("", |s| *s)
+            .trim()
+            .to_string()
+    } else {
+        // 没有 frontmatter，第一行就是命令
+        lines.first()
+            .map_or("", |s| s.trim())
+            .to_string()
+    };
+
+    Ok(CommandFile {
+        name,
+        description,
+        params,
+        content: command_content,
+        file_path: path.to_string_lossy().to_string(),
+    })
+}
+
+/// 简单参数解析
+fn parse_simple_params(params_str: &str) -> Vec<CommandParam> {
+    let mut result = Vec::new();
+
+    // 支持格式: param1 param2 或 param1|desc1 param2|desc2
+    for param in params_str.split_whitespace() {
+        let parts: Vec<&str> = param.split('|').collect();
+        result.push(CommandParam {
+            name: parts[0].to_string(),
+            description: parts.get(1).map(|s| s.to_string()),
+            required: None,
+        });
+    }
+
+    result
 }

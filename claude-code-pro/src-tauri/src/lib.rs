@@ -9,8 +9,8 @@ use services::config_store::ConfigStore;
 use commands::chat::{start_chat, continue_chat};
 use commands::{validate_workspace_path, get_directory_info};
 use commands::file_explorer::{
-    read_directory, get_file_content, create_file, create_directory, 
-    delete_file, rename_file, path_exists
+    read_directory, get_file_content, create_file, create_directory,
+    delete_file, rename_file, path_exists, read_commands
 };
 use std::sync::Mutex;
 
@@ -121,6 +121,7 @@ pub fn run() {
             delete_file,
             rename_file,
             path_exists,
+            read_commands,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
