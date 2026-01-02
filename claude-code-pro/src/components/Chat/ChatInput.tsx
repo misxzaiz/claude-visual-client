@@ -84,7 +84,7 @@ export function ChatInput({
     const textBeforeCursor = newValue.slice(0, cursorPosition);
 
     // 检测命令触发 (/)
-    const commandMatch = textBeforeCursor.match(/\/(\w*)$/);
+    const commandMatch = textBeforeCursor.match(/\/([^\s]*)$/);
     if (commandMatch && !textBeforeCursor.includes('@')) {
       setCommandQuery(commandMatch[1]);
       setSelectedCommandIndex(0);
@@ -102,7 +102,7 @@ export function ChatInput({
     }
 
     // 检测文件引用触发 (@)
-    const fileMatch = textBeforeCursor.match(/@(\w*)$/);
+    const fileMatch = textBeforeCursor.match(/@([^\s]*)$/);
     if (fileMatch) {
       setSelectedFileIndex(0);
       setShowFileSuggestions(true);
@@ -134,7 +134,7 @@ export function ChatInput({
     const textAfterCursor = value.slice(cursorPosition);
 
     // 替换命令部分
-    const newText = textBeforeCursor.replace(/\/\w*$/, `/${name} `) + textAfterCursor;
+    const newText = textBeforeCursor.replace(/\/[^\s]*$/, `/${name} `) + textAfterCursor;
     setValue(newText);
     setShowCommandSuggestions(false);
 
@@ -155,7 +155,7 @@ export function ChatInput({
     const textAfterCursor = value.slice(cursorPosition);
 
     // 替换文件引用部分
-    const newText = textBeforeCursor.replace(/@\w*$/, `@${file.name} `) + textAfterCursor;
+    const newText = textBeforeCursor.replace(/@[^\s]*$/, `@${file.name} `) + textAfterCursor;
     setValue(newText);
     setShowFileSuggestions(false);
 
