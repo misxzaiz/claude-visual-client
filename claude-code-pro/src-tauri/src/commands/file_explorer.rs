@@ -5,6 +5,7 @@ use std::time::SystemTime;
 
 /// 文件搜索结果（用于 @file 引用）
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FileMatch {
     pub name: String,
     pub relative_path: String,
