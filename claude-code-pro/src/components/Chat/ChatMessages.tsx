@@ -1,16 +1,43 @@
 /**
- * 聊天消息列表组件
+ * 聊天消息列表组件 - 使用虚拟滚动优化性能
  */
 
-import { useEffect, useRef, useMemo, useCallback, memo } from 'react';
+import { useMemo, memo } from 'react';
+import { Virtuoso } from 'react-virtuoso';
 import type { Message } from '../../types';
 import { MessageBubble } from './MessageBubble';
+import { useChatStore } from '../../stores';
 
 interface ChatMessagesProps {
   messages: Message[];
   currentContent?: string;
   isStreaming?: boolean;
 }
+
+/** 归档消息提示组件 */
+const ArchiveNotice = memo(function ArchiveNotice({
+  count,
+  onLoad
+}: {
+  count: number;
+  onLoad: () => void;
+}) {
+  if (count === 0) return null;
+
+  return (
+    <div className="flex justify-center py-3 bg-background-surface border-b border-border">
+      <button
+        onClick={onLoad}
+        className="text-xs text-primary hover:text-primary-hover transition-colors flex items-center gap-2"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+        </svg>
+        加载 {count} 条历史消息
+      </button>
+    </div>
+  );
+});
 
 /** 空状态组件 */
 const EmptyState = memo(function EmptyState() {
@@ -66,95 +93,68 @@ export function ChatMessages({
   currentContent = '',
   isStreaming = false,
 }: ChatMessagesProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const prevMessagesLengthRef = useRef(0);
-  const prevContentLengthRef = useRef(0);
-  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 获取归档状态
+  const { archivedMessages, loadArchivedMessages } = useChatStore();
 
-  // 智能滚动：只在内容实际增长时滚动，并添加节流
-  const scrollToBottom = useCallback((smooth = true) => {
-    if (scrollRef.current) {
-      requestAnimationFrame(() => {
-        scrollRef.current?.scrollTo({
-          top: scrollRef.current?.scrollHeight,
-          behavior: smooth ? 'smooth' : 'auto'
-        });
+  // 合并已完成消息和当前流式消息，用于 Virtuoso 渲染
+  const displayData = useMemo(() => {
+    const baseData: Array<Message & { isStreaming?: boolean }> = [...messages];
+
+    // 如果有流式内容，追加为临时消息
+    if (isStreaming && currentContent) {
+      baseData.push({
+        id: 'current',
+        role: 'assistant',
+        content: currentContent,
+        timestamp: new Date().toISOString(),
+        isStreaming: true,
       });
     }
-  }, []);
 
-  useEffect(() => {
-    const contentLength = currentContent.length;
-    const hasNewMessage = messages.length !== prevMessagesLengthRef.current;
-    const hasContentGrowth = contentLength > prevContentLengthRef.current;
+    return baseData;
+  }, [messages, currentContent, isStreaming]);
 
-    // 只在有新消息或内容增长时滚动
-    if (hasNewMessage || (isStreaming && hasContentGrowth)) {
-      // 清除之前的定时器（节流）
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-
-      // 流式更新时使用即时滚动（减少延迟感），完成后使用平滑滚动
-      if (isStreaming && currentContent) {
-        scrollToBottom(false); // 即时滚动，避免动画堆积
-      } else {
-        // 节流：限制滚动频率
-        scrollTimeoutRef.current = setTimeout(() => {
-          scrollToBottom(true);
-        }, 100);
-      }
-
-      prevMessagesLengthRef.current = messages.length;
-      prevContentLengthRef.current = contentLength;
-    }
-
-    return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, [messages.length, currentContent, isStreaming, scrollToBottom]);
-
-  // 缓存消息列表渲染，避免不必要的重新创建
-  const messageElements = useMemo(() => {
-    return messages.map((message) => (
-      <MessageBubble key={message.id} message={message} />
-    ));
-  }, [messages]);
-
-  // 缓存当前流式消息元素
-  const currentMessageElement = useMemo(() => {
-    if (!currentContent) return null;
-    return (
-      <MessageBubble
-        message={{
-          id: 'current',
-          role: 'assistant',
-          content: currentContent,
-          timestamp: new Date().toISOString(),
-        }}
-        isStreaming={isStreaming}
-      />
-    );
-  }, [currentContent, isStreaming]);
-
-  const isEmpty = messages.length === 0 && !currentContent;
+  const isEmpty = displayData.length === 0;
+  const hasArchive = archivedMessages.length > 0;
 
   return (
-    <div
-      ref={scrollRef}
-      className="flex-1 overflow-y-auto p-4"
-    >
-      <div className="max-w-3xl mx-auto h-full">
-        {isEmpty ? (
-          <EmptyState />
-        ) : (
-          <>
-            {messageElements}
-            {currentMessageElement}
-          </>
-        )}
+    <div className="flex-1 overflow-hidden flex flex-col">
+      {/* 归档消息提示 */}
+      {hasArchive && (
+        <ArchiveNotice
+          count={archivedMessages.length}
+          onLoad={loadArchivedMessages}
+        />
+      )}
+
+      {/* 消息列表 */}
+      <div className="flex-1 min-h-0">
+        <div className="h-full max-w-3xl mx-auto">
+          {isEmpty ? (
+            <EmptyState />
+          ) : (
+            <Virtuoso
+              style={{ height: '100%' }}
+              data={displayData}
+              itemContent={(_index, item) => (
+                <MessageBubble
+                  key={item.id}
+                  message={item}
+                  isStreaming={item.isStreaming}
+                />
+              )}
+              components={{
+                EmptyPlaceholder: () => null, // 使用外部条件渲染控制空状态
+              }}
+              // 自动跟随新消息（用户手动滚动时暂停）
+              followOutput="auto"
+              // 平滑滚动到新消息
+              increaseViewportBy={{ top: 100, bottom: 300 }}
+              // 首次渲染时滚动到底部
+              initialTopMostItemIndex={displayData.length - 1}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -75,3 +75,62 @@ body {
   --tw-prose-th-borders: rgba(255, 255, 255, 0.15);
   --tw-prose-td-borders: rgba(255, 255, 255, 0.15);
 }
+
+/* Markdown 代码块样式 */
+.prose pre {
+  background-color: #25252B;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 12px 12px;
+  padding: 16px;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+
+.prose code {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.prose :not(pre) > code {
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: #60A5FA;
+}
+
+/* 标题样式 */
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  margin-top: 24px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.prose h1 { font-size: 24px; }
+.prose h2 { font-size: 20px; }
+.prose h3 { font-size: 18px; }
+
+/* 列表样式 */
+.prose ul,
+.prose ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.prose li {
+  margin: 4px 0;
+}
+
+/* 引用样式 */
+.prose blockquote {
+  border-left: 4px solid rgba(255, 255, 255, 0.2);
+  padding-left: 16px;
+  margin: 16px 0;
+  color: #B4B4B8;
+  font-style: italic;
+}

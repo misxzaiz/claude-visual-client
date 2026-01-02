@@ -10,12 +10,16 @@ import { useToolPanelStore } from './toolPanelStore';
 /** 最大保留消息数量 - 防止内存无限增长 */
 const MAX_MESSAGES = 500;
 
-/** 消息保留阈值 - 当消息数超过此值时开始清理 */
-const MESSAGE_CLEANUP_THRESHOLD = 550;
+/** 消息保留阈值 - 当消息数超过此值时开始归档 */
+const MESSAGE_ARCHIVE_THRESHOLD = 550;
 
 interface ChatState {
   /** 消息列表 */
   messages: Message[];
+  /** 归档的消息列表 */
+  archivedMessages: Message[];
+  /** 归档是否展开 */
+  isArchiveExpanded: boolean;
   /** 当前会话 ID */
   conversationId: string | null;
   /** 是否正在流式传输 */
@@ -56,10 +60,16 @@ interface ChatState {
   interruptChat: () => Promise<void>;
   /** 设置最大消息数 */
   setMaxMessages: (max: number) => void;
+  /** 切换归档展开状态 */
+  toggleArchive: () => void;
+  /** 加载归档消息 */
+  loadArchivedMessages: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
+  archivedMessages: [],
+  isArchiveExpanded: false,
   conversationId: null,
   isStreaming: false,
   currentContent: '',
@@ -71,12 +81,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((state) => {
       const newMessages = [...state.messages, message];
 
-      // 清理旧消息：当超过阈值时，保留最近的 maxMessages 条
-      if (newMessages.length > MESSAGE_CLEANUP_THRESHOLD) {
-        const cleanupCount = newMessages.length - state.maxMessages;
-        console.log(`[chatStore] 清理 ${cleanupCount} 条旧消息，保留最近 ${state.maxMessages} 条`);
+      // 归档旧消息：当超过阈值时，将旧消息移至归档
+      if (newMessages.length > MESSAGE_ARCHIVE_THRESHOLD) {
+        const archiveCount = newMessages.length - state.maxMessages;
+        const toArchive = newMessages.slice(0, archiveCount);
+        const remaining = newMessages.slice(archiveCount);
+
+        console.log(`[chatStore] 归档 ${archiveCount} 条消息，保留最近 ${state.maxMessages} 条`);
+
         return {
-          messages: newMessages.slice(cleanupCount)
+          messages: remaining,
+          archivedMessages: [...toArchive, ...state.archivedMessages]
         };
       }
 
@@ -87,6 +102,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   clearMessages: () => {
     set({
       messages: [],
+      archivedMessages: [],
+      isArchiveExpanded: false,
       currentContent: '',
       conversationId: null
     });
@@ -351,14 +368,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setMaxMessages: (max: number) => {
     set({ maxMessages: Math.max(100, max) }); // 最小限制 100 条
 
-    // 如果当前消息数超过新限制，立即清理
-    const { messages } = get();
+    // 如果当前消息数超过新限制，立即归档
+    const { messages, archivedMessages } = get();
     if (messages.length > max) {
-      const cleanupCount = messages.length - max;
-      console.log(`[chatStore] 调整限制，清理 ${cleanupCount} 条旧消息`);
+      const archiveCount = messages.length - max;
+      const toArchive = messages.slice(0, archiveCount);
+      const remaining = messages.slice(archiveCount);
+
+      console.log(`[chatStore] 调整限制，归档 ${archiveCount} 条旧消息`);
+
       set({
-        messages: messages.slice(cleanupCount)
+        messages: remaining,
+        archivedMessages: [...toArchive, ...archivedMessages]
       });
     }
+  },
+
+  toggleArchive: () => {
+    set((state) => ({
+      isArchiveExpanded: !state.isArchiveExpanded
+    }));
+  },
+
+  loadArchivedMessages: () => {
+    const { archivedMessages } = get();
+    if (archivedMessages.length === 0) return;
+
+    console.log(`[chatStore] 加载 ${archivedMessages.length} 条归档消息`);
+
+    set({
+      messages: [...archivedMessages, ...get().messages],
+      archivedMessages: [],
+      isArchiveExpanded: false
+    });
   },
 }));

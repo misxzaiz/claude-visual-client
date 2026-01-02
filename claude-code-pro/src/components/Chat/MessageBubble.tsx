@@ -5,33 +5,36 @@
 import { memo, useMemo } from 'react';
 import { type Message } from '../../types';
 import { useToolPanelStore } from '../../stores';
+import DOMPurify from 'dompurify';
+import { marked } from 'marked';
 
 interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
 }
 
-/** 格式化消息内容（简单的 Markdown 处理） */
+// 配置 marked
+marked.setOptions({
+  breaks: true,  // 支持 GFM 换行
+  gfm: true,     // GitHub Flavored Markdown
+});
+
+/** Markdown 渲染器（使用 marked + DOMPurify） */
 function formatContent(content: string): string {
-  // 代码块
-  let formatted = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-    const langLabel = lang ? `<span class="text-xs text-text-tertiary select-none float-right mt-1 ml-2">${lang}</span>` : '';
-    return `<div class="relative my-4"><div class="flex items-center justify-between bg-background-surface px-4 py-2 rounded-t-xl border-b border-border"><span class="text-xs text-text-tertiary font-medium">代码</span>${langLabel}</div><pre class="bg-background-elevated p-4 rounded-b-xl overflow-x-auto border-t-0 border shadow-soft"><code class="text-sm text-text-secondary font-mono leading-relaxed">${code.trim()}</code></pre></div>`;
-  });
-
-  // 行内代码
-  formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-background-surface text-primary px-2 py-1 rounded-lg text-sm font-mono border border-border-subtle">$1</code>');
-
-  // 粗体
-  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-
-  // 斜体
-  formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-
-  // 换行
-  formatted = formatted.replace(/\n/g, '<br>');
-
-  return formatted;
+  try {
+    const raw = marked.parse(content) as string;
+    return DOMPurify.sanitize(raw, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'blockquote', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'span', 'div'],
+      ALLOWED_ATTR: ['class', 'href', 'target', 'rel'],
+    });
+  } catch {
+    // 降级到简单处理
+    return content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+  }
 }
 
 /** 工具摘要标签 - 独立组件，隔离工具面板订阅 */
