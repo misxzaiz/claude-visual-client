@@ -73,31 +73,43 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
         <>
           {directories.map((file) => {
             const relativePath = getRelativePath(file.path, current_path);
-            const pathParts = relativePath.split(/[/\\]/);
+            // 移除文件名，只保留目录路径
+            const pathOnly = relativePath.substring(0, relativePath.lastIndexOf(file.name));
 
             return (
               <div
                 key={file.path}
-                className="flex items-center px-2 py-1.5 cursor-pointer rounded transition-colors hover:bg-background-hover group"
+                className="px-2 py-1.5 cursor-pointer rounded transition-colors hover:bg-background-hover group"
                 onClick={() => handleClick(file)}
                 onKeyDown={(e) => handleKeyDown(e, file)}
                 role="button"
                 tabIndex={0}
                 aria-label={`目录 ${file.name}`}
               >
-                <FileIcon
-                  file={file}
-                  className="mr-2 w-4 h-4 flex-shrink-0"
-                />
-                <span className="text-sm text-text-primary truncate flex-1 min-w-0">
-                  {file.name}
-                </span>
-                {/* 相对路径 */}
-                {pathParts.length > 1 && (
-                  <span className="text-xs text-text-tertiary truncate ml-2 max-w-[200px]" title={relativePath}>
-                    {relativePath}
-                  </span>
-                )}
+                <div className="flex items-start gap-2">
+                  <FileIcon
+                    file={file}
+                    className="mt-0.5 w-4 h-4 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    {/* 第一行：文件名 */}
+                    <div
+                      className="text-sm text-text-primary truncate"
+                      title={file.name}
+                    >
+                      {file.name}
+                    </div>
+                    {/* 第二行：相对路径（小字） */}
+                    {pathOnly && pathOnly !== file.name && (
+                      <div
+                        className="text-xs text-text-tertiary truncate mt-0.5"
+                        title={pathOnly}
+                      >
+                        {pathOnly}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             );
           })}
@@ -109,37 +121,52 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
       {/* 文件 */}
       {files.map((file) => {
         const relativePath = getRelativePath(file.path, current_path);
-        const pathParts = relativePath.split(/[/\\]/);
+        // 移除文件名，只保留目录路径
+        const pathOnly = relativePath.substring(0, relativePath.lastIndexOf(file.name));
 
         return (
           <div
             key={file.path}
-            className="flex items-center px-2 py-1.5 cursor-pointer rounded transition-colors hover:bg-background-hover group"
+            className="px-2 py-1.5 cursor-pointer rounded transition-colors hover:bg-background-hover group"
             onClick={() => handleClick(file)}
             onKeyDown={(e) => handleKeyDown(e, file)}
             role="button"
             tabIndex={0}
             aria-label={`文件 ${file.name}`}
           >
-            <FileIcon
-              file={file}
-              className="mr-2 w-4 h-4 flex-shrink-0"
-            />
-            <span className="text-sm text-text-primary truncate flex-1 min-w-0">
-              {file.name}
-            </span>
-            {/* 相对路径 */}
-            {pathParts.length > 1 && (
-              <span className="text-xs text-text-tertiary truncate ml-2 max-w-[200px]" title={relativePath}>
-                {relativePath}
-              </span>
-            )}
-            {/* 文件大小 */}
-            {!file.is_dir && file.size && (
-              <span className="text-xs text-text-tertiary whitespace-nowrap ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                {formatFileSize(file.size)}
-              </span>
-            )}
+            <div className="flex items-start gap-2">
+              <FileIcon
+                file={file}
+                className="mt-0.5 w-4 h-4 flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                {/* 第一行：文件名 */}
+                <div
+                  className="text-sm text-text-primary truncate"
+                  title={file.name}
+                >
+                  {file.name}
+                </div>
+                {/* 第二行：相对路径 + 文件大小（小字） */}
+                <div className="flex items-center gap-2 mt-0.5">
+                  {/* 路径 */}
+                  {pathOnly && pathOnly !== file.name && (
+                    <span
+                      className="text-xs text-text-tertiary truncate flex-1 min-w-0"
+                      title={pathOnly}
+                    >
+                      {pathOnly}
+                    </span>
+                  )}
+                  {/* 文件大小（悬停高亮时显示） */}
+                  {file.size && (
+                    <span className="text-xs text-text-tertiary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                      {formatFileSize(file.size)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         );
       })}
