@@ -19,7 +19,7 @@ function getRelativePath(fullPath: string, basePath: string): string {
 }
 
 // 获取目录路径（不含文件名）
-function getDirectoryPath(relativePath: string, fileName: string): string {
+function getDirectoryPath(relativePath: string): string {
   // 找到最后一个路径分隔符
   const lastSlashIndex = Math.max(
     relativePath.lastIndexOf('/'),
@@ -88,7 +88,7 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
           {directories.map((file) => {
             const relativePath = getRelativePath(file.path, current_path);
             // 获取目录路径（移除文件名本身）
-            const pathOnly = getDirectoryPath(relativePath, file.name);
+            const pathOnly = getDirectoryPath(relativePath);
 
             return (
               <div
@@ -136,7 +136,7 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
       {files.map((file) => {
         const relativePath = getRelativePath(file.path, current_path);
         // 获取目录路径（移除文件名本身）
-        const pathOnly = getDirectoryPath(relativePath, file.name);
+        const pathOnly = getDirectoryPath(relativePath);
 
         return (
           <div
