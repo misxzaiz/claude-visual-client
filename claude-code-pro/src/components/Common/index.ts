@@ -3,6 +3,7 @@
  */
 
 export { Layout, Header, Sidebar, Main, Aside } from './Layout';
+export { ResizeHandle } from './ResizeHandle';
 export { StatusIndicator } from './StatusIndicator';
 export { Button } from './Button';
 export * from './Icons';

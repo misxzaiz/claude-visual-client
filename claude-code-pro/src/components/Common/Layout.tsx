@@ -16,6 +16,7 @@ interface HeaderProps {
 interface SidebarProps {
   children: ReactNode;
   className?: string;
+  width?: number; // 可选的自定义宽度
 }
 
 interface MainProps {
@@ -26,11 +27,7 @@ interface MainProps {
 interface AsideProps {
   children: ReactNode;
   className?: string;
-}
-
-interface AsideProps {
-  children: ReactNode;
-  className?: string;
+  width?: number; // 可选的自定义宽度
 }
 
 /** 主布局容器 */
@@ -53,9 +50,17 @@ export function Header({ title, children }: HeaderProps) {
 }
 
 /** 左侧边栏 */
-export function Sidebar({ children, className = '' }: SidebarProps) {
+export function Sidebar({ children, className = '', width }: SidebarProps) {
+  const widthClass = width ? undefined : 'w-[180px]';
+  const style = width ? { width: `${width}px` } : undefined;
+
   return (
-    <aside className={`flex flex-col w-[180px] bg-background-elevated border-r border-border shrink-0 ${className}`}>
+    <aside
+      className={`flex flex-col bg-background-elevated border-r border-border shrink-0 ${className}`}
+      style={style}
+      {...(width && { className: className + ' ' + widthClass })}
+      {...(!width && { className: (widthClass || '') + ' ' + className })}
+    >
       {children}
     </aside>
   );
@@ -71,9 +76,17 @@ export function Main({ children, className = '' }: MainProps) {
 }
 
 /** 右侧面板 */
-export function Aside({ children, className = '' }: AsideProps) {
+export function Aside({ children, className = '', width }: AsideProps) {
+  const widthClass = width ? undefined : 'w-[280px]';
+  const style = width ? { width: `${width}px` } : undefined;
+
   return (
-    <aside className={`flex flex-col w-[280px] bg-background-elevated border-l border-border shrink-0 ${className}`}>
+    <aside
+      className={`flex flex-col bg-background-elevated border-l border-border shrink-0 ${className}`}
+      style={style}
+      {...(width && { className: className + ' ' + widthClass })}
+      {...(!width && { className: (widthClass || '') + ' ' + className })}
+    >
       {children}
     </aside>
   );

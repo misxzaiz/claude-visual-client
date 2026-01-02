@@ -9,21 +9,28 @@ import { ToolDetail } from './ToolDetail';
 
 interface ToolPanelProps {
   className?: string;
+  width?: number; // 可选的自定义宽度（像素）
 }
 
-export function ToolPanel({ className = '' }: ToolPanelProps) {
+export function ToolPanel({ className = '', width }: ToolPanelProps) {
   const { isOpen, selectedToolId, selectTool, tools } = useToolPanelStore();
 
   if (tools.length === 0 && !selectedToolId) {
     return null;
   }
 
+  // 计算宽度：打开时使用自定义宽度或默认280px，关闭时固定40px
+  const widthStyle = isOpen
+    ? { width: width ? `${width}px` : '280px' }
+    : { width: '40px' };
+
   return (
     <aside
       className={clsx(
-        'flex flex-col border-l border-border bg-background-elevated transition-all duration-300',
-        isOpen ? 'w-[280px]' : 'w-10'
-      , className)}
+        'flex flex-col border-l border-border bg-background-elevated transition-all duration-300 shrink-0',
+        className
+      )}
+      style={widthStyle}
     >
       {/* 头部 */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle shrink-0">

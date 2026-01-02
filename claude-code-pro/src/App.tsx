@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Layout, Sidebar, Main, StatusIndicator, SettingsModal, FileExplorer } from './components/Common';
+import { Layout, Sidebar, Main, StatusIndicator, SettingsModal, FileExplorer, ResizeHandle } from './components/Common';
 import { ChatMessages, ChatInput } from './components/Chat';
 import { ToolPanel } from './components/ToolPanel';
 import { EditorPanel } from './components/Editor';
@@ -22,7 +22,17 @@ function App() {
   } = useChatStore();
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
-  const { showSidebar, showEditor, showToolPanel } = useViewStore();
+  const {
+    showSidebar,
+    showEditor,
+    showToolPanel,
+    sidebarWidth,
+    editorWidth,
+    toolPanelWidth,
+    setSidebarWidth,
+    setEditorWidth,
+    setToolPanelWidth
+  } = useViewStore();
 
   // 初始化配置
   useEffect(() => {
@@ -32,6 +42,32 @@ function App() {
 
   // 监听聊天流事件
   useChatEvent(handleStreamEvent);
+
+  // Sidebar 拖拽处理（右边手柄：向左拖减小宽度）
+  const handleSidebarResize = (delta: number) => {
+    const newWidth = Math.max(150, Math.min(600, sidebarWidth - delta));
+    setSidebarWidth(newWidth);
+  };
+
+  // ToolPanel 拖拽处理（左边手柄：向左拖减小宽度）
+  const handleToolPanelResize = (delta: number) => {
+    const newWidth = Math.max(200, Math.min(600, toolPanelWidth + delta));
+    setToolPanelWidth(newWidth);
+  };
+
+  // Editor/Chat 分割拖拽处理
+  const handleEditorResize = (delta: number) => {
+    const containerWidth = window.innerWidth - sidebarWidth - toolPanelWidth;
+    const currentEditorWidth = containerWidth * (editorWidth / 100);
+    const newEditorWidth = currentEditorWidth + delta;
+    const minEditorWidth = containerWidth * 0.3;
+    const maxEditorWidth = containerWidth * 0.7;
+
+    const clampedWidth = Math.max(minEditorWidth, Math.min(maxEditorWidth, newEditorWidth));
+    const newPercent = (clampedWidth / containerWidth) * 100;
+
+    setEditorWidth(Math.round(newPercent));
+  };
 
   return (
     <Layout>
@@ -48,21 +84,40 @@ function App() {
       <div className="flex flex-1 overflow-hidden">
         {/* 条件渲染 Sidebar */}
         {showSidebar && (
-          <Sidebar>
-            <FileExplorer />
-          </Sidebar>
+          <>
+            <Sidebar width={sidebarWidth}>
+              <FileExplorer />
+            </Sidebar>
+            <ResizeHandle
+              direction="horizontal"
+              position="right"
+              onDrag={handleSidebarResize}
+            />
+          </>
         )}
 
         <Main className="flex-row">
           {/* 条件渲染 Editor */}
           {showEditor && (
-            <div className="w-1/2 min-w-[300px] border-r border-border flex flex-col">
+            <div
+              className="border-r border-border flex flex-col"
+              style={{ width: `${editorWidth}%` }}
+            >
               <EditorPanel />
             </div>
           )}
 
-          {/* 聊天区域：宽度根据 Editor 是否显示调整 */}
-          <div className={showEditor ? "flex-1 flex flex-col min-w-[300px]" : "flex-1 flex flex-col"}>
+          {/* Editor/Chat 分割手柄 */}
+          {showEditor && (
+            <ResizeHandle
+              direction="horizontal"
+              position="right"
+              onDrag={handleEditorResize}
+            />
+          )}
+
+          {/* 聊天区域 */}
+          <div className="flex flex-col min-w-[300px]">
             {/* 状态指示器 */}
             <div className="flex items-center justify-between px-4 py-2 bg-background-elevated border-b border-border-subtle">
               <span className="text-sm text-text-primary">AI 对话</span>
@@ -93,8 +148,17 @@ function App() {
           </div>
         </Main>
 
+        {/* ToolPanel 拖拽手柄 */}
+        {showToolPanel && (
+          <ResizeHandle
+            direction="horizontal"
+            position="left"
+            onDrag={handleToolPanelResize}
+          />
+        )}
+
         {/* 条件渲染 ToolPanel */}
-        {showToolPanel && <ToolPanel />}
+        {showToolPanel && <ToolPanel width={toolPanelWidth} />}
       </div>
 
       {/* 设置模态框 */}
