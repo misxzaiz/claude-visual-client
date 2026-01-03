@@ -24,6 +24,7 @@ import { lintGutter } from '@codemirror/lint';
 // 深色主题
 const darkTheme = EditorView.theme({
   '&': {
+    height: '100%',
     backgroundColor: '#0A0A0B',
     color: '#FAFAFA',
     fontSize: '13px',
@@ -31,6 +32,7 @@ const darkTheme = EditorView.theme({
   },
   '.cm-scroller': {
     overflow: 'auto',
+    height: '100%',
   },
   '.cm-content': {
     padding: '8px 0',
