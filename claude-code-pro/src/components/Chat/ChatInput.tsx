@@ -1,16 +1,17 @@
 /**
  * 聊天输入组件 - 支持斜杠命令和文件引用
+ * 优化版本: 拆分了自适应文本框、提取了自定义Hook、添加了useMemo缓存
  */
 
-import { useState, useRef, KeyboardEvent, useEffect, useCallback } from 'react';
+import { useState, useRef, KeyboardEvent, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '../Common';
 import { IconSend, IconStop } from '../Common/Icons';
 import { useCommandStore } from '../../stores';
-import { useWorkspaceStore } from '../../stores';
 import { parseCommandInput, generateCommandsListMessage, generateHelpMessage } from '../../services/commandService';
-import { searchFiles } from '../../services/fileSearch';
 import { FileSuggestion, CommandSuggestion } from './FileSuggestion';
 import type { FileMatch } from '../../services/fileSearch';
+import { AutoResizingTextarea } from './AutoResizingTextarea';
+import { useFileSearch } from '../../hooks/useFileSearch';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -38,42 +39,21 @@ export function ChatInput({
   // 文件建议状态
   const [showFileSuggestions, setShowFileSuggestions] = useState(false);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
-  const [fileMatches, setFileMatches] = useState<FileMatch[]>([]);
   const [filePosition, setFilePosition] = useState({ top: 0, left: 0 });
 
   const { getCommands, searchCommands } = useCommandStore();
-  const { getCurrentWorkspace } = useWorkspaceStore();
+  const { fileMatches, searchFiles, clearResults } = useFileSearch();
 
-  // 自动调整高度
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    textarea.style.height = 'auto';
-    const newHeight = Math.min(textarea.scrollHeight, 200);
-    textarea.style.height = `${newHeight}px`;
-  }, [value]);
-
-  // 搜索文件
-  const searchFilesDebounced = useCallback(
-    (() => {
-      let timeout: ReturnType<typeof setTimeout>;
-      return (query: string) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(async () => {
-          const workspace = getCurrentWorkspace();
-          if (workspace) {
-            const results = await searchFiles(query, workspace.path, 10);
-            setFileMatches(results);
-          }
-        }, 150);
-      };
-    })(),
-    [getCurrentWorkspace]
+  // 缓存命令搜索结果
+  const suggestedCommands = useMemo(
+    () => searchCommands(commandQuery),
+    [commandQuery, searchCommands]
   );
 
+  // 自动调整高度已移至 AutoResizingTextarea 组件
+
   // 检测触发符
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     setValue(newValue);
 
@@ -107,7 +87,7 @@ export function ChatInput({
       setSelectedFileIndex(0);
       setShowFileSuggestions(true);
       setShowCommandSuggestions(false);
-      searchFilesDebounced(fileMatch[1]);
+      searchFiles(fileMatch[1]);
 
       // 计算位置
       const rect = textarea.getBoundingClientRect();
@@ -122,10 +102,11 @@ export function ChatInput({
     // 隐藏所有建议
     setShowCommandSuggestions(false);
     setShowFileSuggestions(false);
-  };
+    clearResults();
+  }, [searchFiles, clearResults]);
 
   // 选择命令
-  const selectCommand = (name: string) => {
+  const selectCommand = useCallback((name: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -143,10 +124,10 @@ export function ChatInput({
       textarea.focus();
       textarea.setSelectionRange(newText.length - textAfterCursor.length, newText.length - textAfterCursor.length);
     }, 0);
-  };
+  }, [value]);
 
   // 选择文件
-  const selectFile = (file: FileMatch) => {
+  const selectFile = useCallback((file: FileMatch) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -164,17 +145,16 @@ export function ChatInput({
       textarea.focus();
       textarea.setSelectionRange(newText.length - textAfterCursor.length, newText.length - textAfterCursor.length);
     }, 0);
-  };
+  }, [value]);
 
   // 键盘事件处理
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       // 如果建议框打开，选择建议
       if (showCommandSuggestions) {
         e.preventDefault();
-        const commands = searchCommands(commandQuery);
-        if (commands.length > 0) {
-          selectCommand(commands[selectedCommandIndex].name);
+        if (suggestedCommands.length > 0) {
+          selectCommand(suggestedCommands[selectedCommandIndex].name);
         }
         return;
       }
@@ -197,30 +177,19 @@ export function ChatInput({
     if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && (showCommandSuggestions || showFileSuggestions)) {
       e.preventDefault();
 
-      const items = showCommandSuggestions
-        ? searchCommands(commandQuery)
-        : fileMatches;
-
+      const items = showCommandSuggestions ? suggestedCommands : fileMatches;
       if (items.length === 0) return;
 
       const maxIndex = items.length - 1;
       const direction = e.key === 'ArrowUp' ? -1 : 1;
 
-      if (showCommandSuggestions) {
-        setSelectedCommandIndex(prev => {
-          const newIndex = prev + direction;
-          if (newIndex < 0) return maxIndex;
-          if (newIndex > maxIndex) return 0;
-          return newIndex;
-        });
-      } else {
-        setSelectedFileIndex(prev => {
-          const newIndex = prev + direction;
-          if (newIndex < 0) return maxIndex;
-          if (newIndex > maxIndex) return 0;
-          return newIndex;
-        });
-      }
+      const setState = showCommandSuggestions ? setSelectedCommandIndex : setSelectedFileIndex;
+      setState(prev => {
+        const newIndex = prev + direction;
+        if (newIndex < 0) return maxIndex;
+        if (newIndex > maxIndex) return 0;
+        return newIndex;
+      });
       return;
     }
 
@@ -228,6 +197,7 @@ export function ChatInput({
     if (e.key === 'Escape') {
       setShowCommandSuggestions(false);
       setShowFileSuggestions(false);
+      clearResults();
       return;
     }
 
@@ -235,9 +205,8 @@ export function ChatInput({
     if (e.key === 'Tab' && !e.shiftKey) {
       if (showCommandSuggestions) {
         e.preventDefault();
-        const commands = searchCommands(commandQuery);
-        if (commands.length > 0) {
-          selectCommand(commands[selectedCommandIndex].name);
+        if (suggestedCommands.length > 0) {
+          selectCommand(suggestedCommands[selectedCommandIndex].name);
         }
         return;
       }
@@ -250,9 +219,19 @@ export function ChatInput({
         return;
       }
     }
-  };
+  }, [
+    showCommandSuggestions,
+    showFileSuggestions,
+    suggestedCommands,
+    fileMatches,
+    selectedCommandIndex,
+    selectedFileIndex,
+    selectCommand,
+    selectFile,
+    clearResults
+  ]);
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     const trimmed = value.trim();
     if (!trimmed || disabled || isStreaming) return;
 
@@ -267,19 +246,13 @@ export function ChatInput({
       // 处理内置命令
       if (command.name === 'commands') {
         onSend(generateCommandsListMessage(commands));
-        setValue('');
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
-        }
+        resetInput();
         return;
       }
 
       if (command.name === 'help') {
         onSend(generateHelpMessage());
-        setValue('');
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
-        }
+        resetInput();
         return;
       }
 
@@ -290,14 +263,15 @@ export function ChatInput({
       onSend(result.message || '');
     }
 
+    resetInput();
+  }, [value, disabled, isStreaming, getCommands, onSend]);
+
+  const resetInput = useCallback(() => {
     setValue('');
     setShowCommandSuggestions(false);
     setShowFileSuggestions(false);
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
-  };
+    clearResults();
+  }, [clearResults]);
 
   // 点击外部关闭建议
   useEffect(() => {
@@ -310,23 +284,20 @@ export function ChatInput({
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // 获取建议的命令
-  const suggestedCommands = searchCommands(commandQuery);
-
   return (
     <div className="border-t border-border p-4 bg-background-elevated" ref={containerRef}>
       <div className="max-w-3xl mx-auto relative">
         <div className="flex items-end gap-3 bg-background-surface border border-border rounded-2xl p-3 focus-within:ring-2 focus-within:ring-border focus-within:border-primary transition-all shadow-soft hover:shadow-medium">
-          <textarea
+          <AutoResizingTextarea
             ref={textareaRef}
             value={value}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="输入消息... (Enter 发送, Shift+Enter 换行, /命令, @文件)"
             className="flex-1 px-2 py-1.5 bg-transparent text-text-primary placeholder:text-text-tertiary resize-none outline-none text-sm leading-relaxed"
-            rows={1}
             disabled={disabled}
-            style={{ minHeight: '40px', maxHeight: '200px' }}
+            maxHeight={200}
+            minHeight={40}
           />
 
           {isStreaming && onInterrupt ? (

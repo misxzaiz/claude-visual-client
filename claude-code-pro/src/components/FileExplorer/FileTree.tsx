@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { FileTreeNode } from './FileTreeNode';
 import { SearchResultsList } from './SearchResultsList';
 import { useFileExplorerStore } from '../../stores';
@@ -8,34 +8,6 @@ interface FileTreeProps {
   files?: FileInfo[];
   className?: string;
 }
-
-// 递归过滤文件树
-const filterFiles = (files: FileInfo[], query: string): FileInfo[] => {
-  if (!query.trim()) return files;
-
-  const lowerQuery = query.toLowerCase();
-
-  return files.reduce((acc: FileInfo[], file) => {
-    const nameMatches = file.name.toLowerCase().includes(lowerQuery);
-
-    if (file.is_dir) {
-      // 对于目录，检查名称是否匹配或子文件是否匹配
-      const filteredChildren = file.children ? filterFiles(file.children, query) : [];
-
-      if (nameMatches || filteredChildren.length > 0) {
-        acc.push({
-          ...file,
-          children: filteredChildren.length > 0 ? filteredChildren : file.children
-        });
-      }
-    } else if (nameMatches) {
-      // 对于文件，只检查名称是否匹配
-      acc.push(file);
-    }
-
-    return acc;
-  }, []);
-};
 
 export const FileTree = memo<FileTreeProps>(({ files, className = '' }) => {
   const {
@@ -54,10 +26,39 @@ export const FileTree = memo<FileTreeProps>(({ files, className = '' }) => {
 
   const fileTree = files || file_tree;
 
-  // 应用搜索过滤（仅在没有 search_results 时使用，作为降级方案）
-  const filteredFiles = search_query
-    ? filterFiles(fileTree, search_query)
-    : fileTree;
+  // 递归过滤文件树 - 使用 useCallback 缓存
+  const filterFiles = useCallback((filesToFilter: FileInfo[], query: string): FileInfo[] => {
+    if (!query.trim()) return filesToFilter;
+
+    const lowerQuery = query.toLowerCase();
+
+    return filesToFilter.reduce((acc: FileInfo[], file) => {
+      const nameMatches = file.name.toLowerCase().includes(lowerQuery);
+
+      if (file.is_dir) {
+        // 对于目录，检查名称是否匹配或子文件是否匹配
+        const filteredChildren = file.children ? filterFiles(file.children, query) : [];
+
+        if (nameMatches || filteredChildren.length > 0) {
+          acc.push({
+            ...file,
+            children: filteredChildren.length > 0 ? filteredChildren : file.children
+          });
+        }
+      } else if (nameMatches) {
+        // 对于文件，只检查名称是否匹配
+        acc.push(file);
+      }
+
+      return acc;
+    }, []);
+  }, []);
+
+  // 应用搜索过滤 - 使用 useMemo 缓存结果
+  const filteredFiles = useMemo(
+    () => (search_query ? filterFiles(fileTree, search_query) : fileTree),
+    [fileTree, search_query, filterFiles]
+  );
 
   if (filteredFiles.length === 0) {
     return (

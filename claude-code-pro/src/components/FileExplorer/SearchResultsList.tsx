@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { Virtuoso } from 'react-virtuoso';
 import { FileIcon } from './FileIcon';
 import { useFileExplorerStore, useFileEditorStore } from '../../stores';
 import type { FileInfo } from '../../types';
@@ -48,10 +49,73 @@ const formatFileSize = (bytes?: number): string => {
   return `${size.toFixed(1)} ${units[unitIndex]}`;
 };
 
+// 单个文件项组件
+interface FileItemProps {
+  file: FileInfo;
+  currentPath: string;
+  onClick: (file: FileInfo) => void;
+  onKeyDown: (e: React.KeyboardEvent, file: FileInfo) => void;
+}
+
+const FileItem = memo<FileItemProps>(({ file, currentPath, onClick, onKeyDown }) => {
+  const relativePath = getRelativePath(file.path, currentPath);
+  const pathOnly = getDirectoryPath(relativePath);
+
+  return (
+    <div
+      className="px-2 py-1.5 cursor-pointer rounded transition-colors hover:bg-background-hover group"
+      onClick={() => onClick(file)}
+      onKeyDown={(e) => onKeyDown(e, file)}
+      role="button"
+      tabIndex={0}
+      aria-label={`${file.is_dir ? '目录' : '文件'} ${file.name}`}
+    >
+      <div className="flex items-start gap-2">
+        <FileIcon
+          file={file}
+          className="mt-0.5 w-4 h-4 flex-shrink-0"
+        />
+        <div className="flex-1 min-w-0">
+          {/* 第一行：文件名 */}
+          <div
+            className="text-sm text-text-primary truncate"
+            title={file.name}
+          >
+            {file.name}
+          </div>
+          {/* 第二行：相对路径（小字） */}
+          {pathOnly && (
+            <div
+              className="text-xs text-text-tertiary truncate mt-0.5"
+              title={pathOnly}
+            >
+              {pathOnly}
+            </div>
+          )}
+          {/* 文件大小（仅文件显示，悬停时显示） */}
+          {!file.is_dir && file.size && (
+            <div className="text-xs text-text-tertiary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+              {formatFileSize(file.size)}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+FileItem.displayName = 'FileItem';
+
+// 目录分隔线组件
+const DirectorySeparator = memo(() => (
+  <div className="px-2 my-1 border-t border-border-subtle" />
+));
+
+DirectorySeparator.displayName = 'DirectorySeparator';
+
 export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
-  const { select_file } = useFileExplorerStore();
+  const { select_file, current_path } = useFileExplorerStore();
   const { openFile } = useFileEditorStore();
-  const { current_path } = useFileExplorerStore();
 
   const handleClick = async (file: FileInfo) => {
     select_file(file);
@@ -80,111 +144,70 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
   const directories = results.filter(f => f.is_dir);
   const files = results.filter(f => !f.is_dir);
 
-  return (
-    <div className="py-1 min-w-max">
-      {/* 目录 */}
-      {directories.length > 0 && (
-        <>
-          {directories.map((file) => {
-            const relativePath = getRelativePath(file.path, current_path);
-            // 获取目录路径（移除文件名本身）
-            const pathOnly = getDirectoryPath(relativePath);
+  // 合并所有项，目录在前，文件在后，中间加分隔线
+  const allItems: Array<{ type: 'directory' | 'file' | 'separator'; data?: FileInfo }> = [
+    ...directories.map(d => ({ type: 'directory' as const, data: d })),
+    ...(directories.length > 0 && files.length > 0 ? [{ type: 'separator' as const }] : []),
+    ...files.map(f => ({ type: 'file' as const, data: f })),
+  ];
 
-            return (
-              <div
-                key={file.path}
-                className="px-2 py-1.5 cursor-pointer rounded transition-colors hover:bg-background-hover group"
-                onClick={() => handleClick(file)}
-                onKeyDown={(e) => handleKeyDown(e, file)}
-                role="button"
-                tabIndex={0}
-                aria-label={`目录 ${file.name}`}
-              >
-                <div className="flex items-start gap-2">
-                  <FileIcon
-                    file={file}
-                    className="mt-0.5 w-4 h-4 flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    {/* 第一行：文件名 */}
-                    <div
-                      className="text-sm text-text-primary truncate"
-                      title={file.name}
-                    >
-                      {file.name}
-                    </div>
-                    {/* 第二行：相对路径（小字） */}
-                    {pathOnly && (
-                      <div
-                        className="text-xs text-text-tertiary truncate mt-0.5"
-                        title={pathOnly}
-                      >
-                        {pathOnly}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          {/* 分隔线 */}
-          {files.length > 0 && <div className="my-1 border-t border-border-subtle" />}
-        </>
-      )}
+  // 结果较少时直接渲染，使用虚拟滚动的阈值
+  const VIRTUAL_SCROLL_THRESHOLD = 50;
+  const shouldUseVirtualScroll = results.length >= VIRTUAL_SCROLL_THRESHOLD;
 
-      {/* 文件 */}
-      {files.map((file) => {
-        const relativePath = getRelativePath(file.path, current_path);
-        // 获取目录路径（移除文件名本身）
-        const pathOnly = getDirectoryPath(relativePath);
+  // 渲染单个项
+  const renderItem = (index: number) => {
+    const item = allItems[index];
+    if (!item) return null;
 
-        return (
-          <div
-            key={file.path}
-            className="px-2 py-1.5 cursor-pointer rounded transition-colors hover:bg-background-hover group"
-            onClick={() => handleClick(file)}
-            onKeyDown={(e) => handleKeyDown(e, file)}
-            role="button"
-            tabIndex={0}
-            aria-label={`文件 ${file.name}`}
-          >
-            <div className="flex items-start gap-2">
-              <FileIcon
-                file={file}
-                className="mt-0.5 w-4 h-4 flex-shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                {/* 第一行：文件名 */}
-                <div
-                  className="text-sm text-text-primary truncate"
-                  title={file.name}
-                >
-                  {file.name}
-                </div>
-                {/* 第二行：相对路径 + 文件大小（小字） */}
-                <div className="flex items-center gap-2 mt-0.5">
-                  {/* 路径 */}
-                  {pathOnly && (
-                    <span
-                      className="text-xs text-text-tertiary truncate flex-1 min-w-0"
-                      title={pathOnly}
-                    >
-                      {pathOnly}
-                    </span>
-                  )}
-                  {/* 文件大小（悬停时显示） */}
-                  {file.size && (
-                    <span className="text-xs text-text-tertiary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                      {formatFileSize(file.size)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
+    if (item.type === 'separator') {
+      return <DirectorySeparator key="separator" />;
+    }
+
+    return (
+      <FileItem
+        key={item.data!.path}
+        file={item.data!}
+        currentPath={current_path}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+      />
+    );
+  };
+
+  // 非虚拟滚动模式
+  if (!shouldUseVirtualScroll) {
+    return (
+      <div className="py-1 min-w-max">
+        {allItems.map((_, index) => (
+          <div key={allItems[index].data?.path || `sep-${index}`}>
+            {renderItem(index)}
           </div>
+        ))}
+      </div>
+    );
+  }
+
+  // 虚拟滚动模式
+  return (
+    <Virtuoso
+      style={{ height: '100%' }}
+      data={allItems}
+      itemContent={(_index, item) => {
+        if (item.type === 'separator') {
+          return <DirectorySeparator />;
+        }
+        return (
+          <FileItem
+            file={item.data!}
+            currentPath={current_path}
+            onClick={handleClick}
+            onKeyDown={handleKeyDown}
+          />
         );
-      })}
-    </div>
+      }}
+      defaultItemHeight={60} // 预估每个项的高度
+    />
   );
 });
 
