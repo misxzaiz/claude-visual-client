@@ -3,6 +3,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
+import { openPath } from '@tauri-apps/plugin-opener';
 import type { Config, HealthStatus } from '../types';
 
 // ============================================================================
@@ -147,4 +148,13 @@ export async function setLoggingEnabled(enabled: boolean): Promise<void> {
 /** 获取日志开关状态 */
 export async function isLoggingEnabled(): Promise<boolean> {
   return invoke<boolean>('is_logging_enabled');
+}
+
+// ============================================================================
+// 系统相关命令
+// ============================================================================
+
+/** 在默认应用中打开文件（HTML 文件可在浏览器中打开） */
+export async function openInDefaultApp(path: string): Promise<void> {
+  await openPath(path);
 }

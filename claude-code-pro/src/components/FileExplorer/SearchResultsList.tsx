@@ -1,7 +1,9 @@
-import { memo } from 'react';
+import { memo, useState, useCallback, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { FileIcon } from './FileIcon';
+import { ContextMenu, isHtmlFile, type ContextMenuItem } from './ContextMenu';
 import { useFileExplorerStore, useFileEditorStore } from '../../stores';
+import { openInDefaultApp } from '../../services/tauri';
 import type { FileInfo } from '../../types';
 
 interface SearchResultsListProps {
@@ -55,9 +57,10 @@ interface FileItemProps {
   currentPath: string;
   onClick: (file: FileInfo) => void;
   onKeyDown: (e: React.KeyboardEvent, file: FileInfo) => void;
+  onContextMenu: (e: React.MouseEvent, file: FileInfo) => void;
 }
 
-const FileItem = memo<FileItemProps>(({ file, currentPath, onClick, onKeyDown }) => {
+const FileItem = memo<FileItemProps>(({ file, currentPath, onClick, onKeyDown, onContextMenu }) => {
   const relativePath = getRelativePath(file.path, currentPath);
   const pathOnly = getDirectoryPath(relativePath);
 
@@ -66,6 +69,7 @@ const FileItem = memo<FileItemProps>(({ file, currentPath, onClick, onKeyDown })
       className="px-2 py-1.5 cursor-pointer rounded transition-colors hover:bg-background-hover group"
       onClick={() => onClick(file)}
       onKeyDown={(e) => onKeyDown(e, file)}
+      onContextMenu={(e) => onContextMenu(e, file)}
       role="button"
       tabIndex={0}
       aria-label={`${file.is_dir ? '目录' : '文件'} ${file.name}`}
@@ -117,6 +121,14 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
   const { select_file, current_path } = useFileExplorerStore();
   const { openFile } = useFileEditorStore();
 
+  // 右键菜单状态
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    file: FileInfo | null;
+  }>({ visible: false, x: 0, y: 0, file: null });
+
   const handleClick = async (file: FileInfo) => {
     select_file(file);
     if (!file.is_dir) {
@@ -130,6 +142,60 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
       handleClick(file);
     }
   };
+
+  // 关闭右键菜单
+  const closeContextMenu = useCallback(() => {
+    setContextMenu({ visible: false, x: 0, y: 0, file: null });
+  }, []);
+
+  // 右键菜单处理
+  const handleContextMenu = useCallback((e: React.MouseEvent, file: FileInfo) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 选中当前文件
+    select_file(file);
+
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      file,
+    });
+  }, [select_file]);
+
+  // 构建菜单项
+  const menuItems = useMemo((): ContextMenuItem[] => {
+    const file = contextMenu.file;
+    if (!file) return [];
+
+    const items: ContextMenuItem[] = [
+      {
+        id: 'open',
+        label: file.is_dir ? '打开文件夹' : '打开文件',
+        icon: file.is_dir ? '📂' : '📄',
+        action: async () => {
+          if (!file.is_dir) {
+            await openFile(file.path, file.name);
+          }
+        },
+      },
+    ];
+
+    // HTML 文件添加"在浏览器中打开"选项
+    if (isHtmlFile(file)) {
+      items.push({
+        id: 'open-in-browser',
+        label: '在浏览器中打开',
+        icon: '🌐',
+        action: async () => {
+          await openInDefaultApp(file.path);
+        },
+      });
+    }
+
+    return items;
+  }, [contextMenu.file, openFile]);
 
   if (results.length === 0) {
     return (
@@ -155,59 +221,70 @@ export const SearchResultsList = memo<SearchResultsListProps>(({ results }) => {
   const VIRTUAL_SCROLL_THRESHOLD = 50;
   const shouldUseVirtualScroll = results.length >= VIRTUAL_SCROLL_THRESHOLD;
 
-  // 渲染单个项
-  const renderItem = (index: number) => {
-    const item = allItems[index];
-    if (!item) return null;
-
-    if (item.type === 'separator') {
-      return <DirectorySeparator key="separator" />;
-    }
-
-    return (
-      <FileItem
-        key={item.data!.path}
-        file={item.data!}
-        currentPath={current_path}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-      />
-    );
-  };
-
   // 非虚拟滚动模式
   if (!shouldUseVirtualScroll) {
     return (
-      <div className="py-1 min-w-max">
-        {allItems.map((_, index) => (
-          <div key={allItems[index].data?.path || `sep-${index}`}>
-            {renderItem(index)}
-          </div>
-        ))}
+      <div className="py-1 min-w-auto">
+        {allItems.map((item, index) => {
+          if (item.type === 'separator') {
+            return <DirectorySeparator key={`sep-${index}`} />;
+          }
+          return (
+            <FileItem
+              key={item.data!.path}
+              file={item.data!}
+              currentPath={current_path}
+              onClick={handleClick}
+              onKeyDown={handleKeyDown}
+              onContextMenu={handleContextMenu}
+            />
+          );
+        })}
+
+        {/* 右键菜单 */}
+        <ContextMenu
+          visible={contextMenu.visible}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={menuItems}
+          onClose={closeContextMenu}
+        />
       </div>
     );
   }
 
   // 虚拟滚动模式
   return (
-    <Virtuoso
-      style={{ height: '100%' }}
-      data={allItems}
-      itemContent={(_index, item) => {
-        if (item.type === 'separator') {
-          return <DirectorySeparator />;
-        }
-        return (
-          <FileItem
-            file={item.data!}
-            currentPath={current_path}
-            onClick={handleClick}
-            onKeyDown={handleKeyDown}
-          />
-        );
-      }}
-      defaultItemHeight={60} // 预估每个项的高度
-    />
+    <>
+      <Virtuoso
+        style={{ height: '100%' }}
+        data={allItems}
+        itemContent={(_index, item) => {
+          if (item.type === 'separator') {
+            return <DirectorySeparator />;
+          }
+          return (
+            <FileItem
+              file={item.data!}
+              currentPath={current_path}
+              onClick={handleClick}
+              onKeyDown={handleKeyDown}
+              onContextMenu={handleContextMenu}
+            />
+          );
+        }}
+        defaultItemHeight={60} // 预估每个项的高度
+      />
+
+      {/* 右键菜单 */}
+      <ContextMenu
+        visible={contextMenu.visible}
+        x={contextMenu.x}
+        y={contextMenu.y}
+        items={menuItems}
+        onClose={closeContextMenu}
+      />
+    </>
   );
 });
 

@@ -1,6 +1,8 @@
-import { memo, useEffect } from 'react';
+import { memo, useEffect, useState, useCallback } from 'react';
 import { FileIcon } from './FileIcon';
+import { ContextMenu, isHtmlFile, type ContextMenuItem } from './ContextMenu';
 import { useFileExplorerStore, useFileEditorStore } from '../../stores';
+import { openInDefaultApp } from '../../services/tauri';
 import type { FileInfo } from '../../types';
 
 interface FileTreeNodeProps {
@@ -20,8 +22,15 @@ export const FileTreeNode = memo<FileTreeNodeProps>(({
   expandedFolders,
   loadingFolders,
 }) => {
-  const { load_folder_content, get_cached_folder_content, toggle_folder } = useFileExplorerStore();
+  const { load_folder_content, get_cached_folder_content, toggle_folder, select_file } = useFileExplorerStore();
   const { openFile } = useFileEditorStore();
+
+  // 右键菜单状态
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+  }>({ visible: false, x: 0, y: 0 });
 
   // 懒加载逻辑：展开文件夹时加载内容
   useEffect(() => {
@@ -66,9 +75,61 @@ export const FileTreeNode = memo<FileTreeNodeProps>(({
 
   // 检查是否正在加载
   const isLoading = file.is_dir && loadingFolders.has(file.path);
-  
+
   // 检查是否有子内容
   const hasChildren = file.children && file.children.length > 0;
+
+  // 关闭右键菜单
+  const closeContextMenu = useCallback(() => {
+    setContextMenu({ visible: false, x: 0, y: 0 });
+  }, []);
+
+  // 右键菜单处理
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 选中当前文件
+    select_file(file);
+
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  }, [file, select_file]);
+
+  // 构建菜单项
+  const getMenuItems = useCallback((): ContextMenuItem[] => {
+    const items: ContextMenuItem[] = [
+      {
+        id: 'open',
+        label: file.is_dir ? '打开文件夹' : '打开文件',
+        icon: file.is_dir ? '📂' : '📄',
+        action: async () => {
+          if (file.is_dir) {
+            toggle_folder(file.path);
+          } else {
+            await openFile(file.path, file.name);
+          }
+        },
+      },
+    ];
+
+    // HTML 文件添加"在浏览器中打开"选项
+    if (isHtmlFile(file)) {
+      items.push({
+        id: 'open-in-browser',
+        label: '在浏览器中打开',
+        icon: '🌐',
+        action: async () => {
+          await openInDefaultApp(file.path);
+        },
+      });
+    }
+
+    return items;
+  }, [file, toggle_folder, openFile]);
 
   return (
     <div>
@@ -80,6 +141,7 @@ export const FileTreeNode = memo<FileTreeNodeProps>(({
         `}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
         onKeyDown={handleKeyDown}
         role="button"
         tabIndex={0}
@@ -140,13 +202,22 @@ export const FileTreeNode = memo<FileTreeNodeProps>(({
       
       {/* 空文件夹提示 */}
       {file.is_dir && isExpanded && !isLoading && !hasChildren && (
-        <div 
-          style={{ paddingLeft: `${(level + 1) * 16 + 8}px` }} 
+        <div
+          style={{ paddingLeft: `${(level + 1) * 16 + 8}px` }}
           className="text-xs text-text-tertiary py-1 italic"
         >
           空文件夹
         </div>
       )}
+
+      {/* 右键菜单 */}
+      <ContextMenu
+        visible={contextMenu.visible}
+        x={contextMenu.x}
+        y={contextMenu.y}
+        items={getMenuItems()}
+        onClose={closeContextMenu}
+      />
     </div>
   );
 });
