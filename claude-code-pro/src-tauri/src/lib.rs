@@ -17,14 +17,15 @@ use commands::logging::{
     get_log_dir, read_logs, clear_logs, open_log_dir,
     set_logging_enabled, is_logging_enabled
 };
-use std::sync::Mutex;
-
+use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
 /// 全局配置状态
 pub struct AppState {
     pub config_store: Mutex<ConfigStore>,
-    pub sessions: Mutex<HashMap<String, u32>>, // session_id -> process_id
+    /// 保存会话 ID 到进程 PID 的映射
+    /// 使用 PID 而不是 Child，因为 Child 会在读取输出时被消费
+    pub sessions: Arc<Mutex<HashMap<String, u32>>>,
 }
 
 // ============================================================================
@@ -109,7 +110,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             config_store: Mutex::new(config_store),
-            sessions: Mutex::new(HashMap::new()),
+            sessions: Arc::new(Mutex::new(HashMap::new())),
         })
         .invoke_handler(tauri::generate_handler![
             // 配置相关
