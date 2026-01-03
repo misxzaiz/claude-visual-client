@@ -13,6 +13,10 @@ const MAX_MESSAGES = 500;
 /** 消息保留阈值 - 当消息数超过此值时开始归档 */
 const MESSAGE_ARCHIVE_THRESHOLD = 550;
 
+/** 本地存储键 */
+const STORAGE_KEY = 'chat_state_backup';
+const STORAGE_VERSION = '1';
+
 interface ChatState {
   /** 消息列表 */
   messages: Message[];
@@ -64,6 +68,11 @@ interface ChatState {
   toggleArchive: () => void;
   /** 加载归档消息 */
   loadArchivedMessages: () => void;
+
+  /** 保存状态到本地存储 */
+  saveToStorage: () => void;
+  /** 从本地存储恢复状态 */
+  restoreFromStorage: () => boolean;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -97,6 +106,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       return { messages: newMessages };
     });
+
+    // 自动保存状态到本地存储
+    get().saveToStorage();
   },
 
   clearMessages: () => {
@@ -152,6 +164,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // 清空工具面板（为下次对话准备）
       // 注意：这里保留工具用于查看，不清空
     }
+
+    // 自动保存状态到本地存储
+    get().saveToStorage();
   },
 
   setPermissionRequest: (request) => {
@@ -401,5 +416,66 @@ export const useChatStore = create<ChatState>((set, get) => ({
       archivedMessages: [],
       isArchiveExpanded: false
     });
+  },
+
+  saveToStorage: () => {
+    try {
+      const state = get();
+      const data = {
+        version: STORAGE_VERSION,
+        timestamp: new Date().toISOString(),
+        messages: state.messages,
+        archivedMessages: state.archivedMessages,
+        conversationId: state.conversationId,
+        currentContent: state.currentContent,
+        isStreaming: state.isStreaming,
+      };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      console.log('[chatStore] 状态已保存到 sessionStorage');
+    } catch (e) {
+      console.error('[chatStore] 保存状态失败:', e);
+    }
+  },
+
+  restoreFromStorage: () => {
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      if (!stored) return false;
+
+      const data = JSON.parse(stored);
+
+      // 检查版本
+      if (data.version !== STORAGE_VERSION) {
+        console.warn('[chatStore] 存储版本不匹配，忽略');
+        return false;
+      }
+
+      // 检查时间戳，如果超过1小时则不恢复
+      const storedTime = new Date(data.timestamp).getTime();
+      const now = Date.now();
+      if (now - storedTime > 60 * 60 * 1000) {
+        console.log('[chatStore] 存储状态已过期，不恢复');
+        sessionStorage.removeItem(STORAGE_KEY);
+        return false;
+      }
+
+      // 恢复状态
+      set({
+        messages: data.messages || [],
+        archivedMessages: data.archivedMessages || [],
+        conversationId: data.conversationId || null,
+        currentContent: data.currentContent || '',
+        isStreaming: false, // 恢复时不处于流式状态
+      });
+
+      console.log(`[chatStore] 已从 sessionStorage 恢复 ${data.messages.length} 条消息`);
+
+      // 清除已恢复的状态
+      sessionStorage.removeItem(STORAGE_KEY);
+      return true;
+    } catch (e) {
+      console.error('[chatStore] 恢复状态失败:', e);
+      return false;
+    }
   },
 }));

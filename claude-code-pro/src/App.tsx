@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Layout, Sidebar, Main, StatusIndicator, SettingsModal, FileExplorer, ResizeHandle, ConnectingOverlay } from './components/Common';
+import { Layout, Sidebar, Main, StatusIndicator, SettingsModal, FileExplorer, ResizeHandle, ConnectingOverlay, ErrorBoundary } from './components/Common';
 import { ChatMessages, ChatInput } from './components/Chat';
 import { ToolPanel } from './components/ToolPanel';
 import { EditorPanel } from './components/Editor';
@@ -19,6 +19,8 @@ function App() {
     interruptChat,
     handleStreamEvent,
     error,
+    restoreFromStorage,
+    saveToStorage,
   } = useChatStore();
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
@@ -38,7 +40,38 @@ function App() {
   useEffect(() => {
     loadConfig();
     refreshHealth();
+
+    // 尝试从本地存储恢复聊天状态
+    const restored = restoreFromStorage();
+    if (restored) {
+      console.log('[App] 已从崩溃中恢复聊天状态');
+    }
   }, []);
+
+  // 监听崩溃保存事件
+  useEffect(() => {
+    const handleCrashSave = () => {
+      console.log('[App] 检测到崩溃信号，保存状态...');
+      saveToStorage();
+    };
+
+    window.addEventListener('app:crash-save', handleCrashSave);
+    return () => window.removeEventListener('app:crash-save', handleCrashSave);
+  }, [saveToStorage]);
+
+  // 监听恢复事件
+  useEffect(() => {
+    const handleRecover = () => {
+      console.log('[App] 收到恢复信号...');
+      const restored = restoreFromStorage();
+      if (restored) {
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener('app:recover', handleRecover);
+    return () => window.removeEventListener('app:recover', handleRecover);
+  }, [restoreFromStorage]);
 
   // 监听聊天流事件
   useChatEvent(handleStreamEvent);
@@ -70,9 +103,10 @@ function App() {
   };
 
   return (
-    <Layout>
-      {/* 连接中蒙板 */}
-      {isConnecting && <ConnectingOverlay />}
+    <ErrorBoundary>
+      <Layout>
+        {/* 连接中蒙板 */}
+        {isConnecting && <ConnectingOverlay />}
 
       {/* 顶部菜单栏 */}
       <TopMenuBarComponent
@@ -173,7 +207,8 @@ function App() {
       {showCreateWorkspace && (
         <CreateWorkspaceModal onClose={() => setShowCreateWorkspace(false)} />
       )}
-    </Layout>
+      </Layout>
+    </ErrorBoundary>
   );
 }
 
