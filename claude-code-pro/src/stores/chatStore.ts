@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import type { Message, PermissionRequest, StreamEvent } from '../types';
 import * as tauri from '../services/tauri';
 import { useToolPanelStore } from './toolPanelStore';
+import { useWorkspaceStore } from './workspaceStore';
 
 /** 最大保留消息数量 - 防止内存无限增长 */
 const MAX_MESSAGES = 500;
@@ -316,6 +317,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
   sendMessage: async (content: string) => {
     const { conversationId } = get();
 
+    // 获取当前工作区路径，确保 AI 对话使用正确的工作目录
+    const currentWorkspace = useWorkspaceStore.getState().getCurrentWorkspace();
+
+    // 如果没有工作区，不允许发送消息
+    if (!currentWorkspace) {
+      set({
+        error: '请先创建或选择一个工作区',
+      });
+      return;
+    }
+
     // 添加用户消息
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -333,11 +345,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     try {
       if (conversationId) {
-        // 继续现有会话
-        await tauri.continueChat(conversationId, content);
+        // 继续现有会话，传递工作区路径
+        await tauri.continueChat(conversationId, content, currentWorkspace.path);
       } else {
-        // 创建新会话 - 不设置会话ID，等待system事件返回真实ID
-        await tauri.startChat(content);
+        // 创建新会话 - 传递工作区路径确保使用正确的工作目录
+        await tauri.startChat(content, currentWorkspace.path);
       }
     } catch (e) {
       set({
@@ -350,14 +362,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
   continueChat: async () => {
     const { conversationId } = get();
     if (!conversationId) {
-      set({ error: '没有活动会话' });
+      set({ error: '没有活动会话', isStreaming: false });
+      return;
+    }
+
+    // 获取当前工作区路径
+    const currentWorkspace = useWorkspaceStore.getState().getCurrentWorkspace();
+
+    // 如果没有工作区，不允许继续对话
+    if (!currentWorkspace) {
+      set({ error: '请先创建或选择一个工作区', isStreaming: false });
       return;
     }
 
     set({ isStreaming: true, error: null, currentContent: '' });
 
     try {
-      await tauri.continueChat(conversationId, '');
+      await tauri.continueChat(conversationId, '', currentWorkspace.path);
     } catch (e) {
       set({
         error: e instanceof Error ? e.message : '继续对话失败',

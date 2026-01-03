@@ -2,6 +2,7 @@ use crate::error::{AppError, Result};
 use crate::models::config::Config;
 use crate::models::events::StreamEvent;
 use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
 use std::process::{Command, Stdio, Child};
 use tauri::{Emitter, Window};
 use uuid::Uuid;
@@ -177,13 +178,21 @@ pub async fn start_chat(
     message: String,
     window: Window,
     state: tauri::State<'_, crate::AppState>,
+    work_dir: Option<String>,  // 可选的工作目录参数
 ) -> Result<String> {
     eprintln!("[start_chat] 收到消息: {}", message);
 
     // 从 AppState 获取实际配置
     let config_store = state.config_store.lock()
         .map_err(|e| crate::error::AppError::Unknown(e.to_string()))?;
-    let config = config_store.get().clone();
+    let mut config = config_store.get().clone();
+
+    // 如果传入了 work_dir 参数，优先使用它而不是配置中的
+    if let Some(ref work_dir_str) = work_dir {
+        let work_dir_path = PathBuf::from(work_dir_str);
+        eprintln!("[start_chat] 使用传入的工作目录: {:?}", work_dir_path);
+        config.work_dir = Some(work_dir_path);
+    }
 
     // 启动 Claude 会话
     let session = ChatSession::start(&config, &message)?;
@@ -227,6 +236,7 @@ pub async fn continue_chat(
     message: String,
     window: Window,
     state: tauri::State<'_, crate::AppState>,
+    work_dir: Option<String>,  // 可选的工作目录参数
 ) -> Result<()> {
     eprintln!("[continue_chat] 继续会话: {}", session_id);
     eprintln!("[continue_chat] 消息: {}", message);
@@ -234,7 +244,14 @@ pub async fn continue_chat(
     // 从 AppState 获取实际配置
     let config_store = state.config_store.lock()
         .map_err(|e| crate::error::AppError::Unknown(e.to_string()))?;
-    let config = config_store.get().clone();
+    let mut config = config_store.get().clone();
+
+    // 如果传入了 work_dir 参数，优先使用它而不是配置中的
+    if let Some(ref work_dir_str) = work_dir {
+        let work_dir_path = PathBuf::from(work_dir_str);
+        eprintln!("[continue_chat] 使用传入的工作目录: {:?}", work_dir_path);
+        config.work_dir = Some(work_dir_path);
+    }
 
     // 使用 Claude CLI 原生的 --resume 参数恢复会话
     eprintln!("[continue_chat] 使用 --resume 参数恢复会话");

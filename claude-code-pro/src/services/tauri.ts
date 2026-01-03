@@ -49,13 +49,13 @@ export async function healthCheck(): Promise<HealthStatus> {
 // ============================================================================
 
 /** 启动聊天会话 */
-export async function startChat(message: string): Promise<string> {
-  return invoke<string>('start_chat', { message });
+export async function startChat(message: string, workDir?: string): Promise<string> {
+  return invoke<string>('start_chat', { message, workDir });
 }
 
 /** 继续聊天会话 */
-export async function continueChat(sessionId: string, message: string): Promise<void> {
-  return invoke('continue_chat', { sessionId, message });
+export async function continueChat(sessionId: string, message: string, workDir?: string): Promise<void> {
+  return invoke('continue_chat', { sessionId, message, workDir });
 }
 
 /** 中断聊天 */
