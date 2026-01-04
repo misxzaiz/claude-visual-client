@@ -16,14 +16,6 @@ pub struct Config {
 
     /// Git 二进制路径 (Windows)
     pub git_bin_path: Option<String>,
-
-    /// 是否启用日志
-    #[serde(default = "default_enable_logging")]
-    pub enable_logging: bool,
-}
-
-fn default_enable_logging() -> bool {
-    true
 }
 
 impl Default for Config {
@@ -39,7 +31,6 @@ impl Default for Config {
             work_dir: None,
             session_dir: None,
             git_bin_path: None,
-            enable_logging: true,
         }
     }
 }

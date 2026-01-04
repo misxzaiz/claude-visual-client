@@ -113,39 +113,7 @@ export async function pathExists(path: string) {
   return invoke('path_exists', { path });
 }
 
-// ============================================================================
-// 日志相关命令
-// ============================================================================
 
-/** 获取日志目录 */
-export async function getLogDir(): Promise<string> {
-  return invoke<string>('get_log_dir');
-}
-
-/** 读取日志内容 */
-export async function readLogs(maxLines: number = 1000): Promise<string> {
-  return invoke<string>('read_logs', { maxLines });
-}
-
-/** 清空日志文件 */
-export async function clearLogs(): Promise<void> {
-  return invoke('clear_logs');
-}
-
-/** 打开日志目录 */
-export async function openLogDir(): Promise<void> {
-  return invoke('open_log_dir');
-}
-
-/** 设置日志开关 */
-export async function setLoggingEnabled(enabled: boolean): Promise<void> {
-  return invoke('set_logging_enabled', { enabled });
-}
-
-/** 获取日志开关状态 */
-export async function isLoggingEnabled(): Promise<boolean> {
-  return invoke<boolean>('is_logging_enabled');
-}
 
 // ============================================================================
 // 系统相关命令

@@ -12,8 +12,6 @@ export interface Config {
   sessionDir?: string;
   /** Git 二进制路径 (Windows) */
   gitBinPath?: string;
-  /** 是否启用日志 */
-  enableLogging?: boolean;
 }
 
 /** 健康状态 */
