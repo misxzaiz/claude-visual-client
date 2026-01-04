@@ -90,18 +90,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
         
 
-        {/* 工作目录 */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-text-secondary mb-2">
-            当前工作目录
-          </label>
-          <div className="px-3 py-2 bg-background-surface border border-border rounded-lg text-text-tertiary">
-            {localConfig.workDir || '未设置'}
-          </div>
-          <p className="mt-1 text-xs text-text-tertiary">
-            工作目录通过工作区选择器设置
-          </p>
-        </div>
+        
 
         {/* 按钮 */}
         <div className="flex justify-end gap-3">

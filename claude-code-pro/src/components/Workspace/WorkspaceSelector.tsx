@@ -126,12 +126,17 @@ export function WorkspaceSelector() {
                       ? 'text-white/70'
                       : 'text-text-tertiary'
                   }`}>
-                    {workspace.path}
+                    📁 {workspace.path}
                   </div>
                   {workspace.id === currentWorkspaceId && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                      <span className="text-xs">当前</span>
+                    <div className="mt-1 space-y-1">
+                      <div className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        <span className="text-xs">当前工作区</span>
+                      </div>
+                      <div className="text-xs text-white/80 bg-white/10 rounded px-1.5 py-0.5">
+                        📁 {workspace.path}
+                      </div>
                     </div>
                   )}
                 </button>
