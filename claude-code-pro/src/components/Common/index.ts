@@ -7,6 +7,7 @@ export { ResizeHandle } from './ResizeHandle';
 export { StatusIndicator } from './StatusIndicator';
 export { Button } from './Button';
 export { ConnectingOverlay } from './ConnectingOverlay';
+export { ClaudePathSelector } from './ClaudePathSelector';
 export { ErrorBoundary } from './ErrorBoundary';
 export * from './Icons';
 export * from '../Workspace';

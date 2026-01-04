@@ -20,10 +20,7 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        #[cfg(windows)]
-        let default_cmd = "C:\\Users\\28409\\AppData\\Roaming\\npm\\claude.cmd".to_string();
-
-        #[cfg(not(windows))]
+        // 使用 "claude" 作为默认值，让 ConfigStore 在初始化时自动检测完整路径
         let default_cmd = "claude".to_string();
 
         Self {

@@ -62,6 +62,40 @@ fn set_claude_cmd(cmd: String, state: tauri::State<AppState>) -> Result<()> {
     store.set_claude_cmd(cmd)
 }
 
+/// 查找所有可用的 Claude CLI 路径
+#[tauri::command]
+fn find_claude_paths() -> Vec<String> {
+    ConfigStore::find_claude_paths()
+}
+
+/// 路径验证结果
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PathValidationResult {
+    /// 路径是否有效
+    pub valid: bool,
+    /// 错误信息
+    pub error: Option<String>,
+    /// Claude 版本
+    pub version: Option<String>,
+}
+
+/// 验证 Claude CLI 路径
+#[tauri::command]
+fn validate_claude_path(path: String) -> PathValidationResult {
+    match ConfigStore::validate_claude_path(path) {
+        Ok((valid, error, version)) => PathValidationResult {
+            valid,
+            error,
+            version,
+        },
+        Err(_) => PathValidationResult {
+            valid: false,
+            error: Some("验证过程中发生错误".to_string()),
+            version: None,
+        },
+    }
+}
 
 
 /// 健康检查
@@ -108,6 +142,8 @@ pub fn run() {
             update_config,
             set_work_dir,
             set_claude_cmd,
+            find_claude_paths,
+            validate_claude_path,
             // 健康检查
             health_check,
             detect_claude,

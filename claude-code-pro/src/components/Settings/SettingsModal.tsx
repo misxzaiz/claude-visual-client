@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useConfigStore } from '../../stores';
-import { Button } from '../Common';
+import { Button, ClaudePathSelector } from '../Common';
 import type { Config } from '../../types';
 
 interface SettingsModalProps {
@@ -10,7 +10,6 @@ interface SettingsModalProps {
 export function SettingsModal({ onClose }: SettingsModalProps) {
   const { config, loading, error, updateConfig } = useConfigStore();
   const [localConfig, setLocalConfig] = useState<Config | null>(config);
-  
 
   const handleSave = async () => {
     if (!localConfig) return;
@@ -23,18 +22,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     }
   };
 
-  
-
   const handleClaudeCmdChange = (cmd: string) => {
     if (!localConfig) return;
     setLocalConfig({ ...localConfig, claudeCmd: cmd });
   };
-
-  
-
-  
-
-  
 
   if (!localConfig) {
     return (
@@ -74,23 +65,12 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           <label className="block text-sm font-medium text-text-secondary mb-2">
             Claude CLI 命令路径
           </label>
-          <input
-            type="text"
+          <ClaudePathSelector
             value={localConfig.claudeCmd}
-            onChange={(e) => handleClaudeCmdChange(e.target.value)}
-            className="w-full px-3 py-2 bg-background-surface border border-border rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="claude"
+            onChange={handleClaudeCmdChange}
+            disabled={loading}
           />
-          <p className="mt-1 text-xs text-text-tertiary">
-            Claude CLI 命令的完整路径，例如: claude 或 C:\path\to\claude.cmd
-          </p>
         </div>
-
-        
-
-        
-
-        
 
         {/* 按钮 */}
         <div className="flex justify-end gap-3">

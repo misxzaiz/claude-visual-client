@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useConfigStore } from '../../stores';
-import { Button } from './index';
+import { Button, ClaudePathSelector } from './index';
 
 export function ConnectingOverlay() {
   const { config, healthStatus, connectionState, error, retryConnection } = useConfigStore();
@@ -66,7 +66,7 @@ export function ConnectingOverlay() {
             {config?.claudeCmd && (
               <p>当前路径: <code className="bg-background-surface px-1 py-0.5 rounded">{config.claudeCmd}</code></p>
             )}
-            
+
             {/* 详细诊断信息 */}
             <div className="bg-background-surface p-3 rounded-lg space-y-2">
               <p className="font-medium text-text-secondary">🔍 问题诊断:</p>
@@ -85,11 +85,6 @@ export function ConnectingOverlay() {
                 <li>确认已安装 Claude CLI: <code className="px-1 py-0.5 rounded">claude --version</code></li>
                 <li>Windows 用户查找路径: <code className="px-1 py-0.5 rounded">where claude</code></li>
                 <li>Mac/Linux 用户查找路径: <code className="px-1 py-0.5 rounded">which claude</code></li>
-                <li>常见安装位置:
-                  <br />• Windows: <code className="px-1 py-0.5 rounded">C:\Users\[用户名]\AppData\Roaming\npm\claude.cmd</code>
-                  <br />• Mac: <code className="px-1 py-0.5 rounded">/usr/local/bin/claude</code>
-                  <br />• Linux: <code className="px-1 py-0.5 rounded">/usr/bin/claude</code>
-                </li>
                 <li>如果通过 npm 安装，尝试重新安装: <code className="px-1 py-0.5 rounded">npm install -g @anthropic-ai/claude-3-dev</code></li>
               </ol>
             </div>
@@ -121,15 +116,17 @@ export function ConnectingOverlay() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3 w-full max-w-md">
-                <input
-                  type="text"
-                  value={tempPath}
-                  onChange={(e) => setTempPath(e.target.value)}
-                  placeholder="请输入 Claude CLI 的完整路径"
-                  className="w-full px-3 py-2 bg-background-surface border border-border rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary"
-                  autoFocus
-                />
+              <div className="space-y-4 w-full max-w-md">
+                <div className="bg-background-surface p-4 rounded-lg">
+                  <p className="text-sm text-text-secondary mb-3">
+                    选择或输入 Claude CLI 的路径
+                  </p>
+                  <ClaudePathSelector
+                    value={tempPath}
+                    onChange={setTempPath}
+                    compact
+                  />
+                </div>
                 <div className="flex gap-2">
                   <Button
                     onClick={handlePathSubmit}

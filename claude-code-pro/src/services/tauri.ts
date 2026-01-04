@@ -30,7 +30,22 @@ export async function setClaudeCmd(cmd: string): Promise<void> {
   return invoke('set_claude_cmd', { cmd });
 }
 
+/** 路径验证结果 */
+export interface PathValidationResult {
+  valid: boolean;
+  error?: string;
+  version?: string;
+}
 
+/** 查找所有可用的 Claude CLI 路径 */
+export async function findClaudePaths(): Promise<string[]> {
+  return invoke<string[]>('find_claude_paths');
+}
+
+/** 验证 Claude CLI 路径 */
+export async function validateClaudePath(path: string): Promise<PathValidationResult> {
+  return invoke<PathValidationResult>('validate_claude_path', { path });
+}
 
 // ============================================================================
 // 健康检查命令

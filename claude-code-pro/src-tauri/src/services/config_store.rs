@@ -236,7 +236,111 @@ impl ConfigStore {
         self.save()
     }
 
-    
+    /// 查找所有可用的 Claude CLI 路径
+    pub fn find_claude_paths() -> Vec<String> {
+        let mut paths = Vec::new();
+
+        // 1. 尝试 which/where 命令
+        if let Some(system_path) = Self::resolve_claude_path() {
+            if !paths.contains(&system_path) {
+                paths.push(system_path);
+            }
+        }
+
+        // 2. 检查常见安装路径
+        #[cfg(windows)]
+        {
+            if let Some(username) = env::var("USERNAME").ok() {
+                let common_paths = vec![
+                    // npm 全局安装路径
+                    format!(r"{}\AppData\Roaming\npm\claude.cmd", username),
+                    format!(r"{}\AppData\Local\Programs\claude\claude.exe", username),
+                    format!(r"{}\AppData\Local\Programs\claude\claude.cmd", username),
+                    // Program Files
+                    r"C:\Program Files\claude\claude.exe".to_string(),
+                    r"C:\Program Files\claude\claude.cmd".to_string(),
+                    r"C:\Program Files (x86)\claude\claude.exe".to_string(),
+                    r"C:\Program Files (x86)\claude\claude.cmd".to_string(),
+                    // Scoop 安装路径
+                    format!(r"{}\scoop\shims\claude.cmd", env::var("USERPROFILE").unwrap_or_default()),
+                ];
+
+                for path in common_paths {
+                    if Path::new(&path).exists() && Self::validate_path(&path) {
+                        if !paths.contains(&path) {
+                            paths.push(path);
+                        }
+                    }
+                }
+            }
+        }
+
+        #[cfg(not(windows))]
+        {
+            let home = env::var("HOME").unwrap_or_default();
+            let common_paths = vec![
+                // macOS Homebrew
+                "/opt/homebrew/bin/claude".to_string(),
+                "/usr/local/bin/claude".to_string(),
+                // Linux 系统路径
+                "/usr/bin/claude".to_string(),
+                "/usr/local/bin/claude".to_string(),
+                // npm 全局路径
+                format!("{}/.npm-global/bin/claude", home),
+                format!("{}/.local/bin/claude", home),
+            ];
+
+            for path in common_paths {
+                if Path::new(&path).exists() && Self::validate_path(&path) {
+                    if !paths.contains(&path) {
+                        paths.push(path);
+                    }
+                }
+            }
+        }
+
+        paths
+    }
+
+    /// 验证路径是否为有效的 Claude CLI
+    fn validate_path(path: &str) -> bool {
+        Command::new(path)
+            .arg("--version")
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    }
+
+    /// 验证指定路径并返回详细信息
+    pub fn validate_claude_path(path: String) -> Result<(bool, Option<String>, Option<String>)> {
+        let path_obj = Path::new(&path);
+
+        // 检查文件是否存在
+        if !path_obj.exists() {
+            return Ok((false, Some("文件不存在".to_string()), None));
+        }
+
+        // 尝试执行 --version
+        match Command::new(&path).arg("--version").output() {
+            Ok(output) => {
+                if output.status.success() {
+                    let version = String::from_utf8_lossy(&output.stdout)
+                        .lines()
+                        .next()
+                        .map(|s| s.to_string());
+                    Ok((true, None, version))
+                } else {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    Ok((false, Some(format!("执行失败: {}", stderr)), None))
+                }
+            }
+            Err(e) => {
+                Ok((false, Some(format!("无法执行: {}", e)), None))
+            }
+        }
+    }
+
+
 }
 
 impl Default for ConfigStore {
