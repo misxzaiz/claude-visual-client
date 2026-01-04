@@ -30,16 +30,16 @@ export default defineConfig(async () => ({
     },
   },
 
-  // 构建优化配置
+  // Build optimization configuration
   build: {
-    // 代码分割配置
+    // Code splitting configuration
     rollupOptions: {
       output: {
-        // 手动分包，将大型依赖分离到独立的 chunk
+        // Manual chunk splitting to separate large dependencies
         manualChunks: {
-          // React 核心库
+          // React core libraries
           'react-vendor': ['react', 'react-dom'],
-          // CodeMirror 编辑器相关
+          // CodeMirror editor related
           'codemirror': [
             '@codemirror/autocomplete',
             '@codemirror/commands',
@@ -49,40 +49,39 @@ export default defineConfig(async () => ({
             '@codemirror/state',
             '@codemirror/view',
             '@codemirror/lang-javascript',
-            '@codemirror/lang-java',
             '@codemirror/lang-json',
             '@codemirror/lang-python',
-            '@codemirror/lang-rust',
             '@codemirror/lang-html',
             '@codemirror/lang-css',
+            '@codemirror/lang-markdown',
           ],
-          // Markdown 和工具库
+          // Markdown and utility libraries
           'utils': ['marked', 'dompurify', 'zustand'],
           // Tauri API
           'tauri': ['@tauri-apps/api/core', '@tauri-apps/api/event'],
         },
-        // 为每个 chunk 设置单独的 CSS 文件
+        // Set separate CSS file for each chunk
         assetFileNames: (assetInfo) => {
           if (assetInfo.name === 'main.css') return 'assets/main-[hash].css';
           return 'assets/[name]-[hash][extname]';
         },
-        // chunk 文件命名
+        // Chunk file naming
         chunkFileNames: 'assets/[name]-[hash].js',
-        // 入口文件命名
+        // Entry file naming
         entryFileNames: 'assets/main-[hash].js',
       },
     },
-    // chunk 大小警告阈值 (kb)
+    // Chunk size warning threshold (kb)
     chunkSizeWarningLimit: 1000,
-    // 压缩配置
+    // Minify configuration
     minify: 'esbuild',
-    // 目标环境
+    // Target environment
     target: 'es2020',
-    // sourcemap 配置
+    // Sourcemap configuration
     sourcemap: false,
   },
 
-  // 依赖预构建优化
+  // Dependency pre-build optimization
   optimizeDeps: {
     include: [
       'react',
