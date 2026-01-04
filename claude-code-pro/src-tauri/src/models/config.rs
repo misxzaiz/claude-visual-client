@@ -11,9 +11,6 @@ pub struct Config {
     /// 工作目录
     pub work_dir: Option<PathBuf>,
 
-    /// 权限模式: default, bypassPermissions, dontAsk, acceptEdits
-    pub permission_mode: String,
-
     /// 会话保存路径
     pub session_dir: Option<PathBuf>,
 
@@ -40,7 +37,6 @@ impl Default for Config {
         Self {
             claude_cmd: default_cmd,
             work_dir: None,
-            permission_mode: "bypassPermissions".to_string(),
             session_dir: None,
             git_bin_path: None,
             enable_logging: true,

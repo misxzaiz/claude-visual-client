@@ -158,11 +158,7 @@ impl ConfigStore {
         self.save()
     }
 
-    /// 设置权限模式
-    pub fn set_permission_mode(&mut self, mode: String) -> Result<()> {
-        self.config.permission_mode = mode;
-        self.save()
-    }
+    
 
     /// 检测 Claude CLI 是否可用
     pub fn detect_claude(&self) -> Option<String> {

@@ -34,7 +34,6 @@ impl ChatSession {
         eprintln!("[ChatSession::start] 启动 Claude 会话");
         eprintln!("[ChatSession::start] claude_cmd: {}", config.claude_cmd);
         eprintln!("[ChatSession::start] message: {}", message);
-        eprintln!("[ChatSession::start] permission_mode: {}", config.permission_mode);
 
         // 在 Windows 上，.cmd 文件需要通过 cmd.exe 执行
         // 参数必须分别传递，不能合并为一个字符串
@@ -49,7 +48,7 @@ impl ChatSession {
             "--output-format",
             "stream-json",
             "--permission-mode",
-            &config.permission_mode,
+            "bypassPermissions",
             message,
         ]);
 
@@ -62,7 +61,7 @@ impl ChatSession {
             "--output-format",
             "stream-json",
             "--permission-mode",
-            &config.permission_mode,
+            "bypassPermissions",
             message,
         ]);
 
@@ -306,7 +305,7 @@ pub async fn continue_chat(
         "--print",
         "--verbose",
         "--output-format", "stream-json",
-        "--permission-mode", &config.permission_mode,
+        "--permission-mode", "bypassPermissions",
         &message,
     ]);
 
@@ -319,7 +318,7 @@ pub async fn continue_chat(
         "--print",
         "--verbose",
         "--output-format", "stream-json",
-        "--permission-mode", &config.permission_mode,
+        "--permission-mode", "bypassPermissions",
         &message,
     ]);
 

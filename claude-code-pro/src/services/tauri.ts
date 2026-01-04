@@ -30,10 +30,7 @@ export async function setClaudeCmd(cmd: string): Promise<void> {
   return invoke('set_claude_cmd', { cmd });
 }
 
-/** 设置权限模式 */
-export async function setPermissionMode(mode: string): Promise<void> {
-  return invoke('set_permission_mode', { mode });
-}
+
 
 // ============================================================================
 // 健康检查命令

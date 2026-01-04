@@ -65,13 +65,7 @@ fn set_claude_cmd(cmd: String, state: tauri::State<AppState>) -> Result<()> {
     store.set_claude_cmd(cmd)
 }
 
-/// 设置权限模式
-#[tauri::command]
-fn set_permission_mode(mode: String, state: tauri::State<AppState>) -> Result<()> {
-    let mut store = state.config_store.lock()
-        .map_err(|e| error::AppError::Unknown(e.to_string()))?;
-    store.set_permission_mode(mode)
-}
+
 
 /// 健康检查
 #[tauri::command]
@@ -118,7 +112,6 @@ pub fn run() {
             update_config,
             set_work_dir,
             set_claude_cmd,
-            set_permission_mode,
             // 健康检查
             health_check,
             detect_claude,

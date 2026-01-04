@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useConfigStore } from '../../stores';
 import { Button } from '../Common';
-import type { Config, PermissionMode } from '../../types';
+import type { Config } from '../../types';
 import * as tauri from '../../services/tauri';
 
 interface SettingsModalProps {
@@ -24,10 +24,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     }
   };
 
-  const handlePermissionModeChange = (mode: PermissionMode) => {
-    if (!localConfig) return;
-    setLocalConfig({ ...localConfig, permissionMode: mode });
-  };
+  
 
   const handleClaudeCmdChange = (cmd: string) => {
     if (!localConfig) return;
@@ -117,36 +114,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           </p>
         </div>
 
-        {/* 权限模式 */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-text-secondary mb-2">
-            权限模式
-          </label>
-          <select
-            value={localConfig.permissionMode}
-            onChange={(e) => handlePermissionModeChange(e.target.value as PermissionMode)}
-            className="w-full px-3 py-2 bg-background-surface border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="default">默认（每次询问）</option>
-            <option value="bypassPermissions">自动授权</option>
-            <option value="dontAsk">拒绝所有</option>
-            <option value="acceptEdits">允许编辑</option>
-          </select>
-          <div className="mt-2 text-xs text-text-tertiary">
-            <div className="mb-1">
-              <strong>默认：</strong>每次使用工具时询问权限
-            </div>
-            <div className="mb-1">
-              <strong>自动授权：</strong>自动允许所有工具请求
-            </div>
-            <div className="mb-1">
-              <strong>拒绝所有：</strong>拒绝所有工具请求
-            </div>
-            <div>
-              <strong>允许编辑：</strong>允许文件编辑操作
-            </div>
-          </div>
-        </div>
+        
 
         {/* 日志设置 */}
         <div className="mb-6">

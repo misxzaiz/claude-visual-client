@@ -26,8 +26,7 @@ interface ConfigState {
   setWorkDir: (path: string | null) => Promise<void>;
   /** 设置 Claude 命令 */
   setClaudeCmd: (cmd: string) => Promise<void>;
-  /** 设置权限模式 */
-  setPermissionMode: (mode: string) => Promise<void>;
+  
   /** 刷新健康状态 */
   refreshHealth: () => Promise<void>;
 }
@@ -102,19 +101,7 @@ export const useConfigStore = create<ConfigState>((set) => ({
     }
   },
 
-  setPermissionMode: async (mode) => {
-    set({ loading: true, error: null });
-    try {
-      await tauri.setPermissionMode(mode);
-      const config = await tauri.getConfig();
-      set({ config, loading: false });
-    } catch (e) {
-      set({
-        error: e instanceof Error ? e.message : '设置权限模式失败',
-        loading: false
-      });
-    }
-  },
+  
 
   refreshHealth: async () => {
     try {
