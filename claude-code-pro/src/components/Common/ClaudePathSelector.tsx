@@ -120,27 +120,29 @@ export function ClaudePathSelector({
       {/* 自动检测模式 */}
       {mode === 'auto' && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <select
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              disabled={disabled || detecting || detectedPaths.length === 0}
-              className={`flex-1 px-3 py-2 bg-background-surface border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary ${
-                error ? 'border-danger' : 'border-border'
-              } ${disabled || detecting ? 'opacity-50' : ''}`}
-            >
-              <option value="">请选择 Claude CLI 路径</option>
-              {detectedPaths.map((path) => (
-                <option key={path} value={path}>
-                  {path}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-stretch gap-2">
+            <div className="flex-1 min-w-0 relative">
+              <select
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                disabled={disabled || detecting || detectedPaths.length === 0}
+                className={`w-full px-3 py-2 pr-8 bg-background-surface border rounded-l-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:z-10 ${
+                  error ? 'border-danger' : 'border-border'
+                } ${disabled || detecting ? 'opacity-50' : ''}`}
+              >
+                <option value="">请选择 Claude CLI 路径</option>
+                {detectedPaths.map((path) => (
+                  <option key={path} value={path}>
+                    {path}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               type="button"
               onClick={detectPaths}
               disabled={disabled || detecting}
-              className="p-2 bg-background-surface border border-border rounded-lg hover:border-border-hover transition-colors disabled:opacity-50"
+              className="px-3 bg-background-surface border border-l-0 border-border rounded-r-lg hover:border-border-hover transition-colors disabled:opacity-50 flex items-center justify-center"
               title="重新检测"
             >
               <svg

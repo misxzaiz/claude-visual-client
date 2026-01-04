@@ -30,7 +30,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   if (!localConfig) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-background-panel rounded-xl p-6 max-w-md w-full mx-4">
+        <div className="bg-background-elevated rounded-xl p-6 max-w-md w-full mx-4 shadow-soft">
           <div className="text-center">加载配置中...</div>
         </div>
       </div>
@@ -39,7 +39,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-background-panel rounded-xl p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+      <div className="bg-background-elevated rounded-xl p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto shadow-soft">
         {/* 标题 */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-text-primary">设置</h2>
