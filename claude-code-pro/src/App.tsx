@@ -11,7 +11,7 @@ import * as tauri from './services/tauri';
 import './index.css';
 
 function App() {
-  const { healthStatus, isConnecting, loadConfig, refreshHealth } = useConfigStore();
+  const { healthStatus, isConnecting, connectionState, loadConfig, refreshHealth } = useConfigStore();
   const {
     messages,
     currentContent,
@@ -169,7 +169,7 @@ function App() {
     <ErrorBoundary>
       <Layout>
         {/* 连接中蒙板 */}
-        {isConnecting && <ConnectingOverlay />}
+        {(isConnecting || connectionState === 'failed') && <ConnectingOverlay />}
 
       {/* 顶部菜单栏 */}
       <TopMenuBarComponent
